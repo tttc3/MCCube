@@ -7,6 +7,7 @@
 </div>
 
 <!-- Add the badges in here -->
+[![Documentation Status](https://readthedocs.org/projects/mccube/badge/?version=latest)](https://mccube.readthedocs.io/en/latest/?badge=latest)
 
 MCCube is a [JAX](https://jax.readthedocs.io) library for constructing Markov Chain 
 Cubatures (MCCs) that (weakly) solve certain SDEs, and thus, can be used for performing 
