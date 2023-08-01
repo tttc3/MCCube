@@ -2,6 +2,7 @@
 name: AutoRelease
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
