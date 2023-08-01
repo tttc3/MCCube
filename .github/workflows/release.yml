@@ -38,32 +38,33 @@ jobs:
             import subprocess
             import tomllib
 
-            vparse = lambda x: tuple(map(int, x.split(".")))
+            vparse = lambda x: tuple(map(int, x.split('.')))
 
-            with open("pyproject.toml", "rb") as fd:
-                pyproject = tomllib.load(fd)["project"]
+            with open('pyproject.toml', 'rb') as fd:
+                pyproject = tomllib.load(fd)['project']
 
-            project_name = pyproject["name"]
-            project_version = pyproject["version"]
+            project_name = pyproject['name']
+            project_version = pyproject['version']
             pypi_version = subprocess.run(
-                f"python -m pip index versions {project_name}", shell=True, capture_output=True
+                f'python -m pip index versions {project_name}', shell=True, capture_output=True
             ).stdout
             try:
-                pypi_version = pypi_version.split(b"\n", 1)[0].split(b" ")[1][1:-1].decode("utf-8")
+                pypi_version = pypi_version.split(b'\n', 1)[0].split(b' ')[1][1:-1].decode('utf-8')
             except IndexError:
                 # If there exists no current pypi version
-                pypi_version = "0.0.0"
+                pypi_version = '0.0.0'
             new_version = str(vparse(project_version) > vparse(pypi_version)).lower()
 
-            subprocess.run(f"echo name={project_name} >> $GITHUB_OUTPUT", shell=True)
-            subprocess.run(f"echo tag=v{project_version} >> $GITHUB_OUTPUT", shell=True)
-            subprocess.run(f"echo new-version={new_version} >> $GITHUB_OUTPUT", shell=True)
-            print(f"Got checkout_version={vparse(project_version)!r}")
-            print(f"Got pypi_version={vparse(pypi_version)!r}")
-            print(f"Setting name={project_name}")
-            print(f"Setting tag=v{project_version}")
-            print(f"Setting new-version={new_version}")
+            subprocess.run(f'echo name={project_name} >> $GITHUB_OUTPUT', shell=True)
+            subprocess.run(f'echo tag=v{project_version} >> $GITHUB_OUTPUT', shell=True)
+            subprocess.run(f'echo new-version={new_version} >> $GITHUB_OUTPUT', shell=True)
+            print(f'Got checkout_version={vparse(project_version)}')
+            print(f'Got pypi_version={vparse(pypi_version)}')
+            print(f'Setting name={project_name}')
+            print(f'Setting tag=v{project_version}')
+            print(f'Setting new-version={new_version}')
             "
+
 
       - name: Publish package distributions to PyPI
         if: (steps.check_version.outputs.new-version == 'true')
