@@ -1,6 +1,10 @@
 MCCube: Markov Chain Cubature via JAX
 =====================================
 
+.. image:: https://readthedocs.org/projects/mccube/badge/?version=latest
+    :target: https://mccube.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
 MCCube is a `JAX <https://jax.readthedocs.io>`_ library for constructing Markov Chain 
 Cubatures (MCCs) that (weakly) solve certain SDEs, and thus, can be used for performing 
 Bayesian inference.
