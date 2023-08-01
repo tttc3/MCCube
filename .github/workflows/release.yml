@@ -1,0 +1,28 @@
+# based on https://github.com/patrick-kidger/equinox/blob/41fd6a7fa958453faea3bb66e20e3f5d7f57473b/.github/workflows/release.yml
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release
+        uses: patrick-kidger/action_update_python_project@v2
+        with:
+            python-version: "3.11"
+            test-script: |
+                cp -r ${{ github.workspace }}/tests ./tests
+                cp ${{ github.workspace }}/pyproject.toml ./pyproject.toml
+                python -m pip install ".[dev]"
+                pytest
+            pypi-token: ${{ secrets.pypi_token }}
+            github-user: tttc3
+            github-token: ${{ github.token }}
+            email-user: ${{ secrets.email_user }}
+            email-token: ${{ secrets.email_token }}
+            email-server: ${{ secrets.email_server }}
+            email-target: ${{ secrets.email_target }}
