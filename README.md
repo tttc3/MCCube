@@ -1,8 +1,8 @@
 <div align="center">
-<img alt="MCCube logo" src="docs/_static/logo.svg"/>
+<img alt="MCCube logo" src="https://raw.githubusercontent.com/tttc3/MCCube/main/docs/_static/logo.svg"/>
 <h1>
     <strong>MCCube</strong></br>
-    <small><em>Markov chain cubature via JAX</em></small>
+    <em>Markov chain cubature via JAX</em>
 </h1>
 </div>
 
@@ -19,7 +19,7 @@ The core features of MCCube are:
 - Trace-time component validation that ensures components obey certain expected mathematical properties, with minimal runtime overhead;
 - Visualization tools for evaluating and debugging inference/solving performance;
 - A [Blackjax](https://blackjax.readthedocs.io/en/latest/)-like interface provided by `mccube.extensions` (**Coming Soon**);
-- A custom solver for using MCC in [Diffrax](https://docs.kidger.site/diffrax/), also provided by`mccube.extensions` (**Coming Soon**). 
+- A custom solver for using MCC in [Diffrax](https://docs.kidger.site/diffrax/), also provided by `mccube.extensions` (**Coming Soon**). 
 
 In addition, like the samplers in [Blackjax](https://blackjax.readthedocs.io/en/latest/), 
 MCCube can easily be integrated with probabilistic programming languages (PPLs), as long 
@@ -142,6 +142,7 @@ Please cite this repository if it has been useful in your work:
 ## See Also
 Some other Python/JAX packages that you may find interesting:
 
+- [Markov-Chain-Cubature](https://github.com/james-m-foster/markov-chain-cubature) A PyTorch implementation of Markov Chain Cubature.
 - [PySR](https://github.com/MilesCranmer/PySR) High-Performance Symbolic Regression in Python and Julia.
 - [Equinox](https://github.com/patrick-kidger/equinox) A JAX library for parameterised functions.
 - [Diffrax](https://github.com/patrick-kidger/diffrax) A JAX library providing numerical differential equation solvers.
