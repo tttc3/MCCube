@@ -1,3 +1,4 @@
+mccube
 jupytext==1.15.0
 myst_nb==0.17.2
 sphinx==5.3.0
