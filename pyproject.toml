@@ -1,0 +1,71 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mccube"
+version = "0.0.1"
+authors = [{name = "The MCCube team", email = "T.Coxon2@lboro.ac.uk"}]
+description = "Markov chain cubature via JAX."
+keywords = [
+    "sampling",
+    "probability",
+    "cubature",
+    "stochastic differential equations",
+    "mcmc",
+]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "chex>=0.1.81",
+    "equinox>=0.10.3",
+    "jax>=0.4.6",
+    "jaxlib>=0.4.6",
+    "jaxtyping>=0.2.15",
+    "typing_extensions>=4.7.1",
+]
+
+[project.urls]
+homepage = "https://github.com/tttc3/mccube"
+documentation = "https://mccube.readthedocs.io"
+repository = "https://github.com/tttc3/mccube"
+
+[project.optional-dependencies]
+extras = [
+    "diffrax>=0.4.0",
+    "tensorboardX>=2.6.2",
+]
+
+dev = [
+    "mccube[extras]",
+    "pytest",
+    "jupytext",
+    "pre-commit"
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.version]
+path = "mccube/__init__.py"
+
+[tool.jupytext]
+formats = "ipynb,md"
+
+[tool.ruff]
+ignore = ["F722"]
+fixable = ["I001", "F401"]
+
+[tool.ruff.isort]
+extra-standard-library=["typing_extensions"]
