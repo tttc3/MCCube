@@ -19,8 +19,8 @@ The core features of MCCube are:
 - A Component framework for constructing Cubature steps as a composition of a Propagator and Recombinator;
 - Trace-time component validation that ensures components obey certain expected mathematical properties, with minimal runtime overhead;
 - Visualization tools for evaluating and debugging inference/solving performance;
-- A [Blackjax](https://blackjax.readthedocs.io/en/latest/)-like interface provided by `mccube.extensions` (**Coming Soon**);
-- A custom solver for using MCC in [Diffrax](https://docs.kidger.site/diffrax/), also provided by `mccube.extensions` (**Coming Soon**). 
+- A [Blackjax](https://blackjax.readthedocs.io/en/latest/)-like interface provided by `mccube.extensions` (**🚧 Coming Soon 🚧**);
+- A custom solver for using MCC in [Diffrax](https://docs.kidger.site/diffrax/), also provided by `mccube.extensions` (**🚧 Coming Soon 🚧**). 
 
 In addition, like the samplers in [Blackjax](https://blackjax.readthedocs.io/en/latest/), 
 MCCube can easily be integrated with probabilistic programming languages (PPLs), as long 
@@ -53,7 +53,7 @@ Windows support for JAX is currently experimental; WSL2 is the recommended appro
 using JAX on Windows.
 
 ## Documentation
-**Coming soon** at [https://mccube.readthedocs.io/](https://mccube.readthedocs.io/).
+**🚧 Under construction** at [https://mccube.readthedocs.io/](https://mccube.readthedocs.io/) 🚧.
 
 ## What is Markov chain cubature?
 MCC is an approach to constructing a [Cubature on Wiener Space](https://www.jstor.org/stable/4143098) which does not suffer from exponential scaling in time (particle count explosion), thanks to the utilization of (partitioned) recombination in the Cubature step/transition kernel.
