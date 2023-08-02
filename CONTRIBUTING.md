@@ -43,6 +43,15 @@ pip install -r docs/requirements-docs.txt
 sphinx-build -b html docs docs/_build/html -j auto
 ```
 
+Alternatively you can run
+
+```bash
+pip install -r docs/requirements-docs.txt
+sphinx-autobuild docs docs/_build/html
+```
+
+which will start a server at [http://127.0.0.1:8000](http://127.0.0.1:8000), from where you can view the documentation, and will automatically rebuild the documentation upon detecting any change in to files in the `docs` folder.
+
 ## Submitting your pull request
 Once you are satisfied that your enhancements pass the required tests and are well 
 documented, push your committed code with `git push` and open a pull request 
