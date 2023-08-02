@@ -113,5 +113,5 @@ nb_custom_formats = {
 myst_enable_extensions = ["colon_fence"]
 
 
-bibtex_bibfiles = ["refs.bib"]
+bibtex_bibfiles = ["_static/references.bib"]
 bibtex_default_style = "alpha"  # alpha, plain, unsrt, unsrtalpha
