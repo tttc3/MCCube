@@ -189,7 +189,15 @@ Some other Python/JAX packages that you may find interesting:
 
 .. toctree::
     :hidden:
+    :caption: Getting Started
+
+    MCC From Scratch <fromscratch.rst>
+
+.. toctree::
+    :hidden:
     :caption: Further Resources
 
+    .. API Reference <api/index.rst>
+    
     Contributing <CONTRIBUTING.md>
     bibliography.rst
