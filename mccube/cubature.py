@@ -1,28 +1,11 @@
 """Markov Chain Cubature (MCC) construction/inference/solving.
 
-This module provides the tools for constructing SDE cubatures via MCC.
+This module provides the tools for constructing SDE cubatures via MCC, where an SDE 
+cubature (alternatively referred to as a Cubature on Wiener Space :cite:p:`lyons2004`) 
+is an approximate discrete-time integrator that is exact for weak-solutions of some 
+classes of SDEs. 
 
-An SDE cubature (alternatively called a Cubature on Wiener Space :cite:p:`lyons2004`) 
-is an approximate discrete-time integrator that exactly integrates weak-solutions 
-(moments up to degree $N$) for some class of SDEs. This works by reducing the problem 
-of integrating the SDE with respect to its infinitely many strong solution paths, to 
-obtain some expected path, to one of taking discrete sums of finitely many, so called 
-cubature paths.
-
-In measure terminology, an SDE cubature replaces the SDE's Wiener measure with a 
-discrete measure, supported on finitely many bounded variation paths, called a cubature 
-measure/cubature paths (essentially reducing the problem to one of solving many ODEs 
-instead of a single SDE). See :cite:t:`crisan2017cubature` for a nice introduction to 
-the method, and :cite:t:`lyons2004` for a comprehensive investigation.
-
-The salient limitation of SDE cubatures constructed as per :cite:t:`lyons2004`
-is that the paths count scales exponentially with the number of discrete time steps 
-($\mathcal{O}(n^{m})$, where $n$ is the propagator expansion factor, and $m$ is the 
-number of time-integration steps). MCC solves this problem by constructing the 
-collection of paths as a markov chain, wherethe :class:`MCCubatureStep` acts as a 
-transition kernel that employs recombination to maintain the path/particle count at 
-every time step. Note that in MCCube the paths are usually interpreted as particle 
-trajectories, as this provides a consistent physically analogy.
+See :ref:`fromscratch` for more information.
 """
 
 from __future__ import annotations
@@ -171,8 +154,8 @@ def mccubaturesolve(
         Those familiar with cubature formulae may wish to think of the particles in
         each :class:`MCCubatureState` as a collection of cubature vectors $v_i$, whose
         cubature coefficients are all $B_i = 1/n$. For weak quantities such as the mean,
-        \int x dP(x) \approx \frac{1}{n} \sum_i^{n}, the discrete estimator is identical
-        to the implied cubature formula $\sum_i^{n} B_i f(v)$, for $f(v) = v$.
+        $\int x dP(x) \approx \frac{1}{n} \sum_i^{n}$, the discrete estimator is
+        identical to the implied cubature formula $\sum_i^{n} B_i f(v)$, for $f(v) = v$.
     """
     initial_particles = MCCubatureState(time=t0, particles=initial_particles, args=args)
     visualization_callback = visualization_callback or no_operation  # Handle None case

@@ -3,12 +3,15 @@ from __future__ import annotations
 import abc
 from typing import Callable, Sequence, Tuple
 
+
 import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, ArrayLike, Float, Int
 from scipy.linalg import hadamard as scipy_hadamard
+
+from mccube.regions import AbstractIntegrationRegion, GaussianIntegrationRegion
 
 # TODO: include the error estimates for each cubature formula where available.
 # TODO: consider moving into separate package.
@@ -28,104 +31,6 @@ class _CubatureFormulaRegistryMeta(eqx._module._ModuleMeta):
 
 
 formula_registry = _CubatureFormulaRegistryMeta
-
-
-class AbstractIntegrationRegion(eqx.Module):
-    """Abstract base class for all integration regions.
-
-    Attributes:
-        dimension: dimension $d$ of the integration region $\Omega$.
-        affine_transformation_matrix: a matrix specifying an affine transformation of
-            the integration region.
-    """
-
-    dimension: int
-    affine_transformation_matrix: Float[ArrayLike, "d+1 d+1"]
-
-    @abc.abstractmethod
-    def weight_function(x: ArrayLike) -> Array:
-        """Integration weight function/distribution."""
-        ...
-
-    @abc.abstractproperty
-    def volume(self) -> float:
-        """Volume of the weighted integration region."""
-        ...
-
-
-class GaussianIntegrationRegion(AbstractIntegrationRegion):
-    r"""d-dimensional unnormalized gaussian weighted Euclidean integration region.
-
-    Notated as $E_n^{r^2}$ in :cite:p:`stroud1971`, this region represents integration
-    over an d-dimensional Euclidean space, weighted by $\exp{-x_1^2 \dots -x_d^2}$.
-
-    Attributes:
-        dimension: dimension $d$ of the integration region $\Omega$.
-        affine_transformation_matrix: a matrix specifying an affine transformation of
-            the integration region.
-    """
-
-    def __init__(
-        self,
-        dimension: int,
-        mean: None | Float[ArrayLike, " d"] = None,
-        covariance: None | Float[ArrayLike, "d d"] = None,
-    ):
-        """Initialise Gaussian integration region with specified mean and covariance.
-
-        Args:
-            dimension: dimension $d$ of the integration region $\Omega$.
-            mean: if specified, mean should be a $d$ vector; implicitly zero if None.
-            covariance: if specified, covariance should be a $d \times d$ matrix;
-                implicitly diag(1/2) if None.
-        """
-        self.dimension = dimension
-        self.affine_transformation_matrix = self.construct_affine_transformation_matrix(
-            dimension, mean, covariance
-        )
-
-    def weight_function(self, x: ArrayLike) -> Array:
-        return np.exp(-np.sum(x**2, axis=-1))
-
-    @property
-    def volume(self) -> float:
-        return np.pi ** (self.dimension / 2)
-
-    @staticmethod
-    def construct_affine_transformation_matrix(
-        dimension: int,
-        mean: None | Float[ArrayLike, " d"] = None,
-        covariance: None | Float[ArrayLike, "d d"] = None,
-    ):
-        """Generate affine transform for desired Gaussian mean and covariance."""
-        default_cov = np.eye(dimension) / 2
-        target_cov = covariance if covariance is not None else default_cov
-
-        default_mean = np.zeros(dimension)
-        target_mean = mean if mean is not None else default_mean
-
-        default_transform = np.eye(dimension + 1)
-        default_transform[1:, 0] = default_mean
-        default_transform[1:, 1:] = default_cov
-
-        target_transform = np.copy(default_transform)
-        target_transform[1:, 0] = target_mean
-        target_transform[1:, 1:] = target_cov
-
-        # The goal is to transform the quadratic form, $x^T @ A @ x$, in the
-        # multivariate gaussian weight function to $(Tx)^T @ A @ Tx = x^T @ B @ x$,
-        # where $B$ is the inverted affine-covariance matrix (affine covariance
-        # matrix includes the mean).
-        # This requires solving for $T$, which is only possible with the below code
-        # thanks to the covariance matrix being symmetric positive-semi-definite.
-        # TODO: FIX MEAN TRANSFORMATION.
-        A = np.linalg.inv(default_transform)
-        AB_inv = np.matmul(A, target_transform)
-        eigenvalues, eigenvectors = np.linalg.eig(AB_inv)
-        eigenvalues[eigenvalues < 0] = 0
-        D = np.diag(np.sqrt(eigenvalues))
-        T = np.matmul(eigenvectors, np.matmul(D, eigenvectors.T))
-        return T
 
 
 class AbstractCubatureFormula(eqx.Module, metaclass=_CubatureFormulaRegistryMeta):
@@ -192,7 +97,7 @@ class AbstractCubatureFormula(eqx.Module, metaclass=_CubatureFormulaRegistryMeta
         )
 
     @abc.abstractproperty
-    def coefficients(self) -> Float[Array, "k d"]:
+    def coefficients(self) -> Float[Array, " k"]:
         r"""Formula coefficients $B$."""
         ...
 
@@ -228,7 +133,7 @@ class AbstractCubatureFormula(eqx.Module, metaclass=_CubatureFormulaRegistryMeta
         coefficients_, vectors_ = transform_cubature_formula(
             self.coefficients, self.vectors, self.region.affine_transformation_matrix
         )
-        return evaluate_cubature_formula(integrand, coefficients_, vectors_, normalize)
+        return evaluate_cubature_formula(coefficients_, vectors_, integrand, normalize)
 
 
 class AbstractGaussianCubatureFormula(AbstractCubatureFormula):
@@ -237,19 +142,18 @@ class AbstractGaussianCubatureFormula(AbstractCubatureFormula):
     region = GaussianIntegrationRegion
 
 
-# TODO: add reference here.
 class Hadamard(AbstractGaussianCubatureFormula):
     degree: int = 4
 
     @property
-    def coefficients(self) -> Float[Array, "k d"]:
+    def coefficients(self) -> Float[Array, " k"]:
         return self.region.volume / self.vector_count * np.ones(self.vector_count)
 
     @property
     def vector_count(self) -> int:
         max_power = np.ceil(np.log2(self.dimension))
         max_dim = np.power(2, max_power)
-        return max_dim * 2
+        return int(max_dim * 2)
 
     @property
     def vectors(self) -> Int[Array, "k d"]:
@@ -266,12 +170,12 @@ class StroudSecrest63_31(AbstractGaussianCubatureFormula):
     sparse: bool = True
 
     @property
-    def coefficients(self) -> Float[Array, "k d"]:
+    def coefficients(self) -> Float[Array, " k"]:
         return self.region.volume / self.vector_count * np.ones(self.vector_count)
 
     @property
     def vector_count(self) -> int:
-        return 2 * self.dimension
+        return int(2 * self.dimension)
 
     @property
     def vectors(self) -> Float[Array, "k d"]:
@@ -282,17 +186,17 @@ class StroudSecrest63_31(AbstractGaussianCubatureFormula):
 
 
 def evaluate_cubature_formula(
-    integrand: Callable[[Float[ArrayLike, " d"]], Float[Array, "..."]],
     coefficients: Float[ArrayLike, " k"],
     vectors: Float[ArrayLike, "k d"],
+    integrand: Callable[[Float[ArrayLike, " d"]], Float[Array, "..."]] = lambda x: 1.0,
     normalize: bool = True,
 ) -> Tuple[float, Float[Array, "k d"]]:
     """Evaluate a cubature formula for a given integrand $f$.
 
     Args:
-        integrand: function to integrate $f$.
         coefficients: cubature formula coefficients $B_i$.
         vectors: cubature formula vectors $v_i$.
+        integrand: function to integrate $f$ defaults to $f(x) = 1.0$.
         normalize: if True, normalizes the volume of the integration region to one.
             Useful when the region's weight is an unnormalized probability density,
             and one wishes to transform it to a 'proper' normalized density (E.G
@@ -302,7 +206,7 @@ def evaluate_cubature_formula(
         Computed integral and the weighted evaluation points $B_i f(v_i)$.
     """
     eval_vmap = jax.vmap(lambda b, v: b * integrand(v), [0, 0])
-    _coefficients = coefficients / jnp.where(normalize, sum(coefficients), 1.0)
+    _coefficients = coefficients / jnp.where(normalize, jnp.sum(coefficients), 1.0)
     eval_points = eval_vmap(_coefficients, vectors)
     return sum(eval_points), eval_points
 
