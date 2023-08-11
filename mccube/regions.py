@@ -1,4 +1,4 @@
-"""Defines abstract and conrete integration regions."""
+"""Defines abstract and concrete integration regions."""
 from __future__ import annotations
 
 import abc
@@ -13,12 +13,9 @@ class AbstractIntegrationRegion(eqx.Module):
 
     Attributes:
         dimension: dimension $d$ of the integration region $\Omega$.
-        affine_transformation_matrix: a matrix specifying an affine transformation of
-            the integration region.
     """
 
     dimension: int
-    affine_transformation_matrix: Float[ArrayLike, "d+1 d+1"]
 
     @abc.abstractmethod
     def weight_function(x: ArrayLike) -> Array:
@@ -30,6 +27,11 @@ class AbstractIntegrationRegion(eqx.Module):
         """Volume of the weighted integration region."""
         ...
 
+    @abc.abstractproperty
+    def affine_transformation_matrix(self) -> Float[ArrayLike, "d+1 d+1"]:
+        """Affine transformation matrix from the canonical region."""
+        ...
+
 
 class GaussianIntegrationRegion(AbstractIntegrationRegion):
     r"""d-dimensional unnormalized gaussian weighted Euclidean integration region.
@@ -39,9 +41,13 @@ class GaussianIntegrationRegion(AbstractIntegrationRegion):
 
     Attributes:
         dimension: dimension $d$ of the integration region $\Omega$.
+        mean: mean parameter for the Gaussian weight function.
+        covariance: covariance parameter for the Gaussian weight function.
         affine_transformation_matrix: a matrix specifying an affine transformation of
             the integration region.
     """
+    mean: Float[ArrayLike, " d"]
+    covariance: Float[ArrayLike, "d d"]
 
     def __init__(
         self,
@@ -58,9 +64,8 @@ class GaussianIntegrationRegion(AbstractIntegrationRegion):
                 implicitly diag(1/2) if None.
         """
         self.dimension = dimension
-        self.affine_transformation_matrix = self.construct_affine_transformation_matrix(
-            dimension, mean, covariance
-        )
+        self.mean = np.ones(dimension) if mean is None else mean
+        self.covariance = np.eye(dimension) / 2 if covariance is None else covariance
 
     def weight_function(self, x: ArrayLike) -> Array:
         return np.exp(-np.sum(x**2, axis=-1))
@@ -69,20 +74,14 @@ class GaussianIntegrationRegion(AbstractIntegrationRegion):
     def volume(self) -> float:
         return np.pi ** (self.dimension / 2)
 
-    @staticmethod
-    def construct_affine_transformation_matrix(
-        dimension: int,
-        mean: None | Float[ArrayLike, " d"] = None,
-        covariance: None | Float[ArrayLike, "d d"] = None,
-    ):
-        """Generate affine transform for desired Gaussian mean and covariance."""
-        default_cov = np.eye(dimension) / 2
-        target_cov = covariance if covariance is not None else default_cov
+    @property
+    def affine_transformation_matrix(self):
+        default_cov = np.eye(self.dimension) / 2
+        target_cov = self.covariance
 
-        default_mean = np.zeros(dimension)
-        target_mean = mean if mean is not None else default_mean
-
-        default_transform = np.eye(dimension + 1)
+        default_mean = np.zeros(self.dimension)
+        target_mean = self.mean
+        default_transform = np.eye(self.dimension + 1)
         default_transform[1:, 0] = default_mean
         default_transform[1:, 1:] = default_cov
 
