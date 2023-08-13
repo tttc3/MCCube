@@ -1,20 +1,20 @@
+import itertools
+
 import chex
 import sympy
 import numpy as np
 from absl.testing import absltest, parameterized
 
-from mccube.formulae import (
-    Hadamard,
-    StroudSecrest63_31,
-    GaussianIntegrationRegion,
-    _psd_quadratic_transformation,
-)
+from mccube.formulae import Hadamard, StroudSecrest63_31
+from mccube.regions import GaussianIntegrationRegion
 
 
 # Convert Numerical weight functions into sympy weight functions for each region.
 _numpy_to_sympy_weights = {
     GaussianIntegrationRegion: lambda syms: sympy.exp(sum([-(x**2) for x in syms]))
 }
+
+DELTA_RESOLUTION = np.finfo(np.float32).resolution
 
 
 class FormulaTest(chex.TestCase):
@@ -26,19 +26,19 @@ class FormulaTest(chex.TestCase):
     # fmt: off
     @parameterized.named_parameters(
         ("1D (Scalar)", 1, np.array([[ 1],
-                                     [-1]])),
-        ("2D (Even)", 2, np.array([[ 1, 1],
-                                   [ 1,-1],
-                                   [-1,-1],
-                                   [-1, 1]])),
-        ("3D (Odd)", 3, np.array([[ 1, 1, 1],
-                                  [ 1,-1, 1],
-                                  [ 1, 1,-1],
-                                  [ 1,-1,-1],
-                                  [-1,-1,-1],
-                                  [-1, 1,-1],
-                                  [-1,-1, 1],
-                                  [-1, 1, 1]])),
+                                     [-1]]) / np.sqrt(1)),
+        ("2D (Even)"  , 2, np.array([[ 1, 1],
+                                     [ 1,-1],
+                                     [-1,-1],
+                                     [-1, 1]]) / np.sqrt(2)),
+        ("3D (Odd)"   , 3, np.array([[ 1, 1, 1],
+                                     [ 1,-1, 1],
+                                     [ 1, 1,-1],
+                                     [ 1,-1,-1],
+                                     [-1,-1,-1],
+                                     [-1, 1,-1],
+                                     [-1,-1, 1],
+                                     [-1, 1, 1]]) / np.sqrt(3)),
     ) 
     # fmt: on
     def test_hadamard(self, dimension, expected_vectors):
@@ -51,17 +51,18 @@ class FormulaTest(chex.TestCase):
 
     # fmt: off
     @parameterized.named_parameters(
-        ("1D (Scalar)", 1, np.array([1/2,-1/2])),
-        ("2D (Even)", 2 , np.array([[ 1, 0],
-                                    [ 0, 1],
-                                    [-1, 0],
-                                    [ 0,-1]])),
-        ("3D (Odd)", 3, np.array([[ np.sqrt(3/2),            0,            0],
-                                  [            0, np.sqrt(3/2),            0],
-                                  [            0,            0, np.sqrt(3/2)],
-                                  [-np.sqrt(3/2),            0,            0],
-                                  [            0,-np.sqrt(3/2),            0],
-                                  [            0,            0,-np.sqrt(3/2)]])),
+        ("1D (Scalar)", 1, np.array([[ 1],
+                                     [-1]]) / np.sqrt(2)),
+        ("2D (Even)"  , 2, np.array([[ 1, 0],
+                                     [ 0, 1],
+                                     [-1, 0],
+                                     [ 0,-1]])),
+        ("3D (Odd)"   , 3, np.array([[ 1, 0, 0],
+                                     [ 0, 1, 0],
+                                     [ 0, 0, 1],
+                                     [-1, 0, 0],
+                                     [ 0,-1, 0],
+                                     [ 0, 0,-1]]) * np.sqrt(3/2)),
     ) 
     # fmt:on
     def test_stroudsecrest63_31(self, dimension, expected_vectors):
@@ -93,81 +94,52 @@ class FormulaTest(chex.TestCase):
         chex.assert_trees_all_close(formula.vectors, expected_vectors)
 
         # Check that the cubature formula is indeed of the expected degree.
-        (
-            volume_integral,
-            max_degree_integral,
-            max_degree_integrand,
-        ) = self.expected_cubature_integrals(formula)
-        self.assertAlmostEqual(volume_integral, formula.region.volume)
-        self.assertAlmostEqual(1.0, formula(lambda x: 1.0, normalize=True)[0])
-        self.assertAlmostEqual(
-            volume_integral, formula(lambda x: 1.0, normalize=False)[0], delta=1e-6
+        monomial_generator = itertools.combinations_with_replacement(
+            range(formula.degree + 1), formula.dimension
         )
-        self.assertAlmostEqual(
-            max_degree_integral,
-            formula(max_degree_integrand, normalize=False)[0],
-            delta=1e-6,
+        exact_monomial_generator = itertools.filterfalse(
+            lambda x: sum(x) > formula.degree, monomial_generator
         )
+
+        for monomial_degrees in exact_monomial_generator:
+            (
+                volume_integral,
+                integral,
+                unweighted_integrand,
+                symbolic_integrand,
+            ) = self.symbolic_monomial_integrals(formula, monomial_degrees)
+            print(f"Testing cubature for monomial: {symbolic_integrand}")
+            self.assertAlmostEqual(volume_integral, formula.region.volume)
+            self.assertAlmostEqual(
+                integral,
+                formula(unweighted_integrand, normalize=False)[0],
+                delta=DELTA_RESOLUTION,
+            )
+            self.assertAlmostEqual(
+                integral / volume_integral,
+                formula(unweighted_integrand, normalize=True)[0],
+                delta=DELTA_RESOLUTION,
+            )
 
         # Check the cubature for affine transformations of the region.
         # Test for standard normal and some random transformations.
         # transformed_formula = formula.transform()
 
-    def expected_cubature_integrals(self, formula):
-        dimension = formula.dimension
-        degree = formula.degree
-        syms = sympy.symbols(
-            [f"x{i}" for i in range(min(dimension, degree))], real=True
-        )
-        monomial = sympy.prod(syms)
-        if degree > dimension:
-            monomial = monomial * syms[0] ** (degree - dimension)
+    def symbolic_monomial_integrals(self, formula, monomial_degrees):
+        """
+        Generates integral and integrand all d-dimension polynomials of degree not
+        exceeding $m$.
+        """
+        # Constuct symbolic integrand.
+        syms = sympy.symbols([f"x_{i}" for i, _ in enumerate(monomial_degrees)])
+        monomial = sympy.prod([s**d for s, d in zip(syms, monomial_degrees)])
         weight = _numpy_to_sympy_weights[formula.region.__class__](syms)
         integrand = monomial * weight
+        # Perform symbolic integration.
         volume = sympy.integrate(weight, *[(x, -sympy.oo, sympy.oo) for x in syms])
         integral = sympy.integrate(integrand, *[(x, -sympy.oo, sympy.oo) for x in syms])
         lambdified_monomial = sympy.lambdify(syms, monomial, modules="jax")
-        return volume, integral, lambda x: lambdified_monomial(*x)
-
-
-class RegionTest(chex.TestCase):
-    """
-    Ensure that cubature regions can be instantiated correctly, have appropriate
-    attributes set, and correctly define their affine transformations.
-    """
-
-    def test_gaussian(self):
-        ...
-
-    def test_psd_quadratic_transformation(self):
-        """As per example 2 pg 10-12 :cite:p:`stroud1971`, except $T$ is denoted $M$."""
-        # fmt: off
-        # X as per eq 1.4-10.
-        x = np.array([[1, 1, 0],
-                      [1,-1, 0],
-                      [1, 0, 1],
-                      [1, 0,-1]])
-        A = np.array([[1,0,0],
-                      [0,1,0],
-                      [0,0,1]])
-        # B is as per eq 1.4-11.
-        B = np.array([[ 50,  0,  0],
-                      [-20, 20,-16],
-                      [-20,-16, 20]]) / 9
-        M_inv = np.array([[   1,  0,    0],
-                          [-5/3, 4/3,-2/3],
-                          [-5/3,-2/3, 4/3]])
-        # fmt: on
-        # Check linear
-        M_linear = _psd_quadratic_transformation(A[1:, 1:], B[1:, 1:], affine=False)
-        chex.assert_tree_all_close(B[1:, 1:], M_linear.T @ A[1:, 1:] @ M_linear)
-        chex.assert_trees_all_close(M_inv[1:, 1:], M_linear)
-        chex.assert_trees_all_close(M_inv[1:, 1:] @ x[:, 1:].T, M_linear @ x[:, 1:].T)
-
-        # Check affine
-        M_affine = _psd_quadratic_transformation(A, B)
-        chex.assert_trees_all_close(M_inv, M_affine)
-        chex.assert_trees_all_close(M_inv @ x.T, M_affine @ x.T)
+        return volume, integral, lambda x: lambdified_monomial(*x), monomial
 
 
 if __name__ == "__main__":

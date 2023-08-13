@@ -64,7 +64,7 @@ class GaussianIntegrationRegion(AbstractIntegrationRegion):
                 implicitly diag(1/2) if None.
         """
         self.dimension = dimension
-        self.mean = np.ones(dimension) if mean is None else mean
+        self.mean = np.zeros(dimension) if mean is None else mean
         self.covariance = np.eye(dimension) / 2 if covariance is None else covariance
 
     def weight_function(self, x: ArrayLike) -> Array:

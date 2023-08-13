@@ -158,8 +158,9 @@ class Hadamard(AbstractGaussianCubatureFormula):
     @property
     def vectors(self) -> Int[Array, "k d"]:
         hadamard_matrix = scipy_hadamard(self.vector_count // 2)
+
         new_matrix = hadamard_matrix[:, : self.dimension]
-        return np.vstack((new_matrix, -new_matrix))
+        return np.vstack((new_matrix, -new_matrix)) / np.sqrt(self.dimension)
 
 
 class StroudSecrest63_31(AbstractGaussianCubatureFormula):
