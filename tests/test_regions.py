@@ -18,13 +18,13 @@ class RegionTest(chex.TestCase):
         ("1D (Scalar)"         , 1, 3 * np.ones(1), 4 * np.eye(1)),
         ("2D (None Mean)"      , 2,           None, 2 * np.eye(2)),
         ("3D (None Cov)"       , 3, 2 * np.ones(3),          None),
-        ("4D (None Mean + Cov)", 3, 2 * np.ones(3),          None),
+        ("4D (None Mean + Cov)", 4,           None,          None),
     )
     # fmt: on
     def test_gaussian(self, dimension, mean, covariance):
         region = GaussianIntegrationRegion(dimension, mean, covariance)
         self.assertEqual(region.dimension, dimension)
-        test_mean = np.ones(dimension) if mean is None else mean
+        test_mean = np.zeros(dimension) if mean is None else mean
         test_covariance = np.eye(dimension) / 2 if covariance is None else covariance
         chex.assert_trees_all_equal(region.mean, test_mean)
         chex.assert_trees_all_equal(region.covariance, test_covariance)
