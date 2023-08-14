@@ -9,7 +9,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jaxtyping import Array, ArrayLike, Float, Int
-from scipy.linalg import hadamard as scipy_hadamard
+from scipy.linalg import hadamard
 
 from mccube.regions import AbstractIntegrationRegion, GaussianIntegrationRegion
 
@@ -143,11 +143,11 @@ class AbstractGaussianCubatureFormula(AbstractCubatureFormula):
 
 
 class Hadamard(AbstractGaussianCubatureFormula):
-    degree: int = 4
+    degree: int = 3
 
     @property
     def coefficients(self) -> Float[Array, " k"]:
-        return self.region.volume / self.vector_count * np.ones(self.vector_count)
+        return self.region.volume / self.vector_count
 
     @property
     def vector_count(self) -> int:
@@ -157,10 +157,9 @@ class Hadamard(AbstractGaussianCubatureFormula):
 
     @property
     def vectors(self) -> Int[Array, "k d"]:
-        hadamard_matrix = scipy_hadamard(self.vector_count // 2)
-
+        hadamard_matrix = hadamard(self.vector_count // 2)
         new_matrix = hadamard_matrix[:, : self.dimension]
-        return np.vstack((new_matrix, -new_matrix)) / np.sqrt(self.dimension)
+        return np.vstack((new_matrix, -new_matrix)) / np.sqrt(2)
 
 
 class StroudSecrest63_31(AbstractGaussianCubatureFormula):
@@ -172,7 +171,7 @@ class StroudSecrest63_31(AbstractGaussianCubatureFormula):
 
     @property
     def coefficients(self) -> Float[Array, " k"]:
-        return self.region.volume / self.vector_count * np.ones(self.vector_count)
+        return self.region.volume / self.vector_count
 
     @property
     def vector_count(self) -> int:
@@ -186,6 +185,32 @@ class StroudSecrest63_31(AbstractGaussianCubatureFormula):
         return points_fully_symmetric
 
 
+class StroudSecrest63_32(AbstractGaussianCubatureFormula):
+    r"""Degree 3 cubature formula from :cite:p:`stroudSecrest1963`, listing $E^{r^2}_n$
+    3-2. (pg316) in :cite:p:`stroud1971`.
+
+    This formula is identical to the :class:`Hadamard` formula for dimensions less than
+    four. For all other dimensions :class:`Hadamard` is strictly more efficient.
+    """
+
+    degree: int = 3
+
+    @property
+    def coefficients(self) -> Array:
+        return self.region.volume / (2**self.dimension)
+
+    @property
+    def vector_count(self) -> int:
+        return int(2**self.dimension)
+
+    @property
+    def vectors(self) -> Array:
+        d = self.dimension
+        radius = np.sqrt(1 / 2)
+        points = np.array(np.meshgrid(*[[radius, -radius]] * d)).reshape(d, -1).T
+        return points
+
+
 def evaluate_cubature_formula(
     coefficients: Float[ArrayLike, " k"],
     vectors: Float[ArrayLike, "k d"],
@@ -197,7 +222,7 @@ def evaluate_cubature_formula(
     Args:
         coefficients: cubature formula coefficients $B_i$.
         vectors: cubature formula vectors $v_i$.
-        integrand: function to integrate $f$ defaults to $f(x) = 1.0$.
+        integrand: function to integrate, defaults to $f(x) = 1.0$.
         normalize: if True, normalizes the volume of the integration region to one.
             Useful when the region's weight is an unnormalized probability density,
             and one wishes to transform it to a 'proper' normalized density (E.G
@@ -206,9 +231,10 @@ def evaluate_cubature_formula(
     Returns:
         Computed integral and the weighted evaluation points $B_i f(v_i)$.
     """
-    eval_vmap = jax.vmap(lambda b, v: b * integrand(v), [0, 0])
-    _coefficients = coefficients / jnp.where(normalize, jnp.sum(coefficients), 1.0)
-    eval_points = eval_vmap(_coefficients, vectors)
+    _normalizer = jnp.where(normalize, vectors.shape[0] * coefficients, 1.0)
+    _coefficients = coefficients / _normalizer
+    eval_vmap = jax.vmap(lambda v: _coefficients * integrand(v), [0])
+    eval_points = eval_vmap(vectors)
     return sum(eval_points), eval_points
 
 
@@ -232,9 +258,9 @@ def transform_cubature_formula(
     if affine_transformation_matrix is None:
         return coefficients, vectors
 
-    coefficients_ = np.linalg.det(affine_transformation_matrix) * coefficients
-    vectors_ = np.matmul(
-        np.hstack([np.ones((vectors.shape[0], 1)), vectors]),
+    coefficients_ = jnp.linalg.det(affine_transformation_matrix) * coefficients
+    vectors_ = jnp.matmul(
+        jnp.hstack([jnp.ones((vectors.shape[0], 1)), vectors]),
         affine_transformation_matrix,
     )
     return coefficients_, vectors_[:, 1:]
