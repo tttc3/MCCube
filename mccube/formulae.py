@@ -68,14 +68,14 @@ class AbstractCubatureFormula(eqx.Module, metaclass=_CubatureFormulaRegistryMeta
 
     @classmethod
     def _validate_dimension(cls, dimension: int) -> int:
-        """If cubature formula is valid for the given dimension.
+        r"""If cubature formula is valid for the given dimension.
 
         Args:
             dimension: dimension $d$ of the integration region $\Omega$, for which
                 the cubature formula is valid.
 
         Returns:
-            dimension
+            dimension.
 
         Raises:
             ValueError: dimension not in range/set specified by `self.valid_dimensions`.
@@ -96,19 +96,50 @@ class AbstractCubatureFormula(eqx.Module, metaclass=_CubatureFormulaRegistryMeta
             f"the give dimension; expected {err_msg}, got {dimension}",
         )
 
+    def transform(self, *args, **kwargs):
+        """Create a new formula instance for a transformed integration region.
+
+        Args:
+            self: instance of a formula for which the integration region is to be
+                affine transformed.
+            args: transformation arguments for the integration region.
+            kwargs: transformation keyword arguments for the integration region.
+
+        Returns:
+            New instance for the region `Region(formula.dimension, *args, **kwargs)`.
+        """
+        return self.__class__(self.dimension, *args, **kwargs)
+
+    @property
+    def coefficients(self) -> float:
+        r"""Transformed formula coefficients $det(M) B$."""
+        return self._coefficients * np.linalg.det(
+            self.region.affine_transformation_matrix
+        )
+
+    @property
+    def vectors(self) -> Float[Array, "k d"]:
+        r"""Transformed formula vectors $M @ v$."""
+        vectors = self._vectors
+        transform = self.region.affine_transformation_matrix
+        affine_vectors = jnp.matmul(
+            transform, jnp.hstack([jnp.ones((vectors.shape[0], 1)), vectors]).T
+        )
+        return affine_vectors.T[:, 1:]
+
     @abc.abstractproperty
-    def coefficients(self) -> Float[Array, " k"]:
+    def _coefficients(self) -> float:
         r"""Formula coefficients $B$."""
+        ...
+
+    @abc.abstractproperty
+    def _vectors(self) -> Float[Array, "k d"]:
+        r"""Formula vectors $v$."""
         ...
 
     @abc.abstractproperty
     def vector_count(self) -> int:
         r"""Formula vector count $k$."""
-        ...
-
-    @abc.abstractproperty
-    def vectors(self) -> Float[Array, "k d"]:
-        r"""Formula vectors $v$."""
         ...
 
     def __call__(
@@ -130,10 +161,9 @@ class AbstractCubatureFormula(eqx.Module, metaclass=_CubatureFormulaRegistryMeta
         Returns:
             Approximated integral and weighted evaluations of $f$ at each vector $v_i$.
         """
-        coefficients_, vectors_ = transform_cubature_formula(
-            self.coefficients, self.vectors, self.region.affine_transformation_matrix
+        return evaluate_cubature_formula(
+            self.coefficients, self.vectors, integrand, normalize
         )
-        return evaluate_cubature_formula(coefficients_, vectors_, integrand, normalize)
 
 
 class AbstractGaussianCubatureFormula(AbstractCubatureFormula):
@@ -146,20 +176,20 @@ class Hadamard(AbstractGaussianCubatureFormula):
     degree: int = 3
 
     @property
-    def coefficients(self) -> Float[Array, " k"]:
+    def _coefficients(self) -> float:
         return self.region.volume / self.vector_count
+
+    @property
+    def _vectors(self) -> Int[Array, "k d"]:
+        hadamard_matrix = hadamard(self.vector_count // 2)
+        new_matrix = hadamard_matrix[:, : self.dimension]
+        return np.vstack((new_matrix, -new_matrix)) / np.sqrt(2)
 
     @property
     def vector_count(self) -> int:
         max_power = np.ceil(np.log2(self.dimension))
         max_dim = np.power(2, max_power)
         return int(max_dim * 2)
-
-    @property
-    def vectors(self) -> Int[Array, "k d"]:
-        hadamard_matrix = hadamard(self.vector_count // 2)
-        new_matrix = hadamard_matrix[:, : self.dimension]
-        return np.vstack((new_matrix, -new_matrix)) / np.sqrt(2)
 
 
 class StroudSecrest63_31(AbstractGaussianCubatureFormula):
@@ -170,19 +200,19 @@ class StroudSecrest63_31(AbstractGaussianCubatureFormula):
     sparse: bool = True
 
     @property
-    def coefficients(self) -> Float[Array, " k"]:
+    def _coefficients(self) -> float:
         return self.region.volume / self.vector_count
 
     @property
-    def vector_count(self) -> int:
-        return int(2 * self.dimension)
-
-    @property
-    def vectors(self) -> Float[Array, "k d"]:
+    def _vectors(self) -> Float[Array, "k d"]:
         radius = np.sqrt(self.dimension / 2)
         points_symmetric = radius * np.diag(np.ones(self.dimension))
         points_fully_symmetric = np.vstack([points_symmetric, -points_symmetric])
         return points_fully_symmetric
+
+    @property
+    def vector_count(self) -> int:
+        return int(2 * self.dimension)
 
 
 class StroudSecrest63_32(AbstractGaussianCubatureFormula):
@@ -196,19 +226,19 @@ class StroudSecrest63_32(AbstractGaussianCubatureFormula):
     degree: int = 3
 
     @property
-    def coefficients(self) -> Array:
+    def _coefficients(self) -> float:
         return self.region.volume / (2**self.dimension)
 
     @property
-    def vector_count(self) -> int:
-        return int(2**self.dimension)
-
-    @property
-    def vectors(self) -> Array:
+    def _vectors(self) -> Float[Array, "k d"]:
         d = self.dimension
         radius = np.sqrt(1 / 2)
         points = np.array(np.meshgrid(*[[radius, -radius]] * d)).reshape(d, -1).T
         return points
+
+    @property
+    def vector_count(self) -> int:
+        return int(2**self.dimension)
 
 
 def evaluate_cubature_formula(
@@ -217,7 +247,7 @@ def evaluate_cubature_formula(
     integrand: Callable[[Float[ArrayLike, " d"]], Float[Array, "..."]] = lambda x: 1.0,
     normalize: bool = True,
 ) -> Tuple[float, Float[Array, "k d"]]:
-    """Evaluate a cubature formula for a given integrand $f$.
+    r"""Evaluate a cubature formula for a given integrand $f$.
 
     Args:
         coefficients: cubature formula coefficients $B_i$.
@@ -236,34 +266,6 @@ def evaluate_cubature_formula(
     eval_vmap = jax.vmap(lambda v: _coefficients * integrand(v), [0])
     eval_points = eval_vmap(vectors)
     return sum(eval_points), eval_points
-
-
-def transform_cubature_formula(
-    coefficients: Float[ArrayLike, "k d"],
-    vectors: Float[ArrayLike, "k d"],
-    affine_transformation_matrix: None | Float[ArrayLike, "d+1 d+1"] = None,
-) -> Tuple[Float[ArrayLike, "k d"], Float[ArrayLike, "k d"]]:
-    """Affine transformation of cubature formula coefficients and vectors.
-
-    Args:
-        coefficients: cubature formula coefficients $B_i$.
-        vectors: cubature formula vectors $v_i$.
-        affine_transformation_matrix: a matrix specifying an affine transformation of
-            the integration region.
-
-    Returns:
-        Affine transformed coefficients and vectors.
-    """
-
-    if affine_transformation_matrix is None:
-        return coefficients, vectors
-
-    coefficients_ = jnp.linalg.det(affine_transformation_matrix) * coefficients
-    vectors_ = jnp.matmul(
-        jnp.hstack([jnp.ones((vectors.shape[0], 1)), vectors]),
-        affine_transformation_matrix,
-    )
-    return coefficients_, vectors_[:, 1:]
 
 
 def minimal_cubature_formula(

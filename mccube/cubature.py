@@ -5,7 +5,7 @@ cubature (alternatively referred to as a Cubature on Wiener Space :cite:p:`lyons
 is an approximate discrete-time integrator that is exact for weak-solutions of some 
 classes of SDEs. 
 
-See :ref:`fromscratch` for more information.
+See :doc:`../fromscratch` for more information.
 """
 
 from __future__ import annotations
