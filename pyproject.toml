@@ -47,9 +47,14 @@ extras = [
     "tensorboardX>=2.6.2",
 ]
 
-dev = [
-    "mccube[extras]",
+test = [
+    "absl-py",
     "pytest",
+    "sympy",
+]
+
+dev = [
+    "mccube[extras, test]",
     "jupytext",
     "pre-commit"
 ]
