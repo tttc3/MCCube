@@ -35,7 +35,6 @@ master_doc = "index"
 # ones.
 extensions = [
     "sphinx_design",
-    "sphinx_math_dollar",
     "sphinx.ext.autodoc",
     "sphinx.ext.autodoc.typehints",
     "sphinx.ext.autosummary",
@@ -110,7 +109,7 @@ suppress_warnings = ["mystnb.unknown_mime_type"]
 nb_custom_formats = {
     ".md": ["jupytext.reads", {"fmt": "mystnb"}],
 }
-myst_enable_extensions = ["colon_fence"]
+myst_enable_extensions = ["colon_fence", "dollarmath"]
 
 
 bibtex_bibfiles = ["_static/references.bib"]
