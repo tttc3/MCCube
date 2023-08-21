@@ -197,7 +197,6 @@ Some other Python/JAX packages that you may find interesting:
     :hidden:
     :caption: Further Resources
 
-    .. API Reference <api/index.rst>
-    
+    API Reference <api/index.rst>
     Contributing <CONTRIBUTING.md>
     bibliography.rst
