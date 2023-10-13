@@ -118,7 +118,7 @@ can be used, for example:
 from mccube.extensions.visualizers import TensorboardVisualizer
 
 with TensorboardVisualizer() as tbv:
-    cubature = mccubaturesolve(..., visualization_callback=tbv)
+    mccubature_paths = mccubaturesolve(..., visualization_callback=tbv)
 ```
 
 To make use of the Tensorboard visualization suite remember to run the following command
@@ -127,6 +127,8 @@ either during/after each experimental run:
 ```bash
 tensorboard --logdir=experiments
 ```
+
+Note that the Tensorboard package must be installed separately.
 
 ## Citation
 Please cite this repository if it has been useful in your work:
