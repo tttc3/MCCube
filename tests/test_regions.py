@@ -78,7 +78,7 @@ class RegionTest(chex.TestCase):
         M = sp.matrix2numpy(self.M_inv.inv(), dtype=float)
         # Check linear.
         M_linear = _psd_quadratic_transformation(A[1:, 1:], B[1:, 1:])
-        chex.assert_tree_all_close(B[1:, 1:], M_linear.T @ A[1:, 1:] @ M_linear)
+        chex.assert_trees_all_close(B[1:, 1:], M_linear.T @ A[1:, 1:] @ M_linear)
         chex.assert_trees_all_close(M_inv[1:, 1:], M_linear)
         # Check affine.
         M_affine = _psd_quadratic_transformation(A, B, affine=True)
@@ -87,9 +87,9 @@ class RegionTest(chex.TestCase):
         M_linear_inv = _psd_quadratic_transformation(
             A[1:, 1:], B[1:, 1:], inverted=True
         )
-        chex.assert_tree_all_close(M[1:, 1:], M_linear_inv)
+        chex.assert_trees_all_close(M[1:, 1:], M_linear_inv)
         M_affine_inv = _psd_quadratic_transformation(A, B, affine=True, inverted=True)
-        chex.assert_tree_all_close(M, M_affine_inv)
+        chex.assert_trees_all_close(M, M_affine_inv)
 
 
 if __name__ == "__main__":
