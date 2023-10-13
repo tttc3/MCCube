@@ -1,26 +1,36 @@
 ---
-jupytext:
-  main_language: python
-  text_representation:
-    extension: .md
-    format_name: myst
-    format_version: 0.13
-    jupytext_version: 1.15.0
-kernelspec:
-  display_name: MCCDeploy
-  language: python
-  name: python3
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .md
+      format_name: markdown
+      format_version: '1.3'
+      jupytext_version: 1.15.0
+  kernelspec:
+    display_name: MCCDeploy
+    language: python
+    name: python3
 ---
 
+<!-- #region -->
 # Markov chain cubature from scratch
 
-The goal here is to introduce and explain, in a (hopefully) intuitive way, the concepts 
-that underpin Markov chain cubature. A very basic understanding of stochastic calculus 
-is assumed, but as no proofs are presented here, it should be accessible to non 
-Mathematicians.
+The goal here is to introduce and explain, the concepts that underpin Markov chain cubature. 
+A very basic understanding of stochastic calculus is assumed, but as no proofs are presented 
+here, it should be accessible to non Mathematicians.
 
 Code examples will be presented where appropriate, but the primary goal here is not to 
 demonstrate operation of MCCube, but to instead explain its underpinning concepts.
+
+## Markov Chain Cubature
+Before delving into the details, it is prudent to precisley define and identify the core 
+underpinning components of Markov Chain Cubature. 
+
+Markov Chain Cubature (MCC) is a technique for approximatley (weakly) solving stochastic differential 
+equations (SDEs) via Cubature on Wiener Space, where the so-called cubature paths are 
+constructed as a set of discrete Markov Chains.
+In a moderate number of dimensions, MCC should provide far greater accuracy, with far fewer chains 
+than an alternative Markov Chain Monte Carlo approximation of the (weak) solution to the SDE.
 
 ## Quadrature and Cubature
 
@@ -30,17 +40,19 @@ integration region is expected to be of dimension $n \ge 2$, while quadrature im
 dimension $n=1 $; in practice, many authors ignore the distinction and simply refer to 
 any numerical integration formulae of the form
 
-$$Q \left[f\right] := \sum_{i=1}^{k} B_i f(v_i) \approx \int\dotsi\int_{\mathbb{R}^d} w(x_1,\dots,x_d) f(x_1,\dots,x_d) dx_1,\dots,dx_d$$
+$$
+Q \left[f\right] := \sum_{i=1}^{k} B_i f(v_i) \approx \int_{\Omega} w(\boldsymbol{x}) f(\boldsymbol{x}) \operatorname{d}\!\boldsymbol{x},
+$$
 
 as a quadrature/cubature formulae $Q$, where $B_i \in \mathbb{R}$ and $v_i \in \mathbb{R^d}$ are formula specific 
 coefficients and vectors; $w:\mathbb{R}^d \to \mathbb{R}$ is a weight function/distribution; 
 and $f:\mathbb{R}^d \to \mathbb{R}$ is the function to integrate/the integrand.
 
 Such formulae $Q$ are said to be of degree $m$, with respect to a specific weight 
-$w(\mathbf{x})$ and integration region $\Omega \in \mathbb{R}^d$, if they exactly 
+$w(\boldsymbol{x})$ and integration region $\Omega \subseteq \mathbb{R}^d$, if they exactly 
 integrate all $f \in \mathcal{P}^m(\Omega)$ (polynomials of degree at least $m$ over the specified region $\Omega$). That is to say, degree $m$ formulae $Q^m$ are exact for 
-$f(\mathbf{x}) = \sum_{\alpha \in \mathcal{A}_m} c_{\alpha} \mathbf{x}^\alpha$
-where $\mathbf{x}^{\alpha} = \prod_{j=1}^d x_j^{\alpha_j}$ are monomials and 
+$f(\boldsymbol{x}) = \sum_{\alpha \in \mathcal{A}_m} c_{\alpha} \boldsymbol{x}^\alpha$
+where $\boldsymbol{x}^{\alpha} = \prod_{j=1}^d x_j^{\alpha_j}$ are monomials and 
 $c_\alpha \in \mathbb{R}$ are coefficients, for all multi-indexes $\alpha \in \mathcal{A}_m := \{(\alpha_1, \dots, \alpha_d) \in \mathbb{N}_0, \sum_{i=1}^d \alpha_i \le m\}$.
 
 :::{admonition} A measure theoretic definition.
@@ -48,38 +60,40 @@ $c_\alpha \in \mathbb{R}$ are coefficients, for all multi-indexes $\alpha \in \m
 
 For those familiar with Lebesgue-Steiltjies integration, the above can be more precisely denoted as
 
-$$Q \left[f\right] := \int_\Omega f(d)\ d\hat{w}(x) \approx \int_\Omega f(x)\ dw(x),$$
+$$
+Q \left[f\right] := \int_\Omega f(\boldsymbol{x})\ \operatorname{d}\!\hat{w}(x) \approx \int_\Omega f(x)\ \operatorname{d}\!w(x),
+$$
 
 where $f: \Omega \to \mathbb{R} \in L^1(\Omega, \mathcal{B}, w)$, and $\hat{w} = \sum_{i=1}^k B_i \delta_{x_i}$
-is the quadrature/cubature measure. For all pratical formulae, where $\text{supp}(\hat{w}) < \text{supp}(w)$, 
+is the quadrature/cubature measure. For all formulae where $\operatorname{card}(\operatorname{supp}(\hat{w})) < \operatorname{card}(\operatorname{supp}(w))$, 
 one may interpret $\hat{w}$ as a compression of $w$ {cite:p}`satoshi2021`.
-
-If you are not familiar with this notation then don't worry. Understanding the prior 
-presentation, via improper Reimann Integrals, is sufficient for this article. 
 :::
 
-### Integrating non-polynoimial functions
+### Integrating non-polynomial functions
 
 While integrating polynomials is an important problem, in many practical cases one will
 not have the luxury of dealing with such nice analytic functions. Thus, to be practical,
 one must consider how the error of the integration formulae scales for more general 
-$f \in C(\Omega)$.
+$f$.
 
 The really neat thing to realize is that any formulae $Q^m$ will be a *good* integrator
 for *any* continuous $f$ that can be well approximated by some $\hat{f} \in \mathcal{P}^{m}(\Omega)$,
-such as the degree $m$ Taylor polynomial of $f$. In addition, when $f \in C^{m+1}(\Omega)$, 
-one can show via the Peano kernel theorem that the formulae has an error bounded by 
+such as the degree $m$ (truncated) Taylor polynomial of $f$, given by
+$$
+T^m[f](x) = \sum_{k=0}^{m} f^{(k)}(\boldsymbol{x}_0) \frac{(\boldsymbol{x}-\boldsymbol{x}_0)^k}{k!},
+$$
+where $f(x) = T^m[f](\boldsymbol{x}) + r^m[f](\boldsymbol{x})$ and $r^m[f](\boldsymbol{x})$ is the Taylor remainder.
+In practice such a truncated polynomial will only be a good approximation in sufficiently small neighborhoods of $\boldsymbol{x}_0$.
 
+When $f \in C^{m+1}(\Omega)$, one can show via the Peano kernel theorem that the 
+formulae has an error bounded by 
 $$
 \left|\int_{\Omega}  w(x) f(x)\ dx - Q^m[f] \right| \le c\ \max_{x \in \Omega} \left| f^{(m+1)}(x)\right|,
 $$
-
 where the constant $c > 0$ is independent of $f$ {cite:p}`iserles2008` (note that the univariate 
 case is shown for simplicty). This simple error bound is a result of $Q^m$, by definition, 
 being an exact integrator of the degree $m$ Taylor polynomial $T^m[f](x)$ about any 
-point in the domain. Noting that $f(x) = T^m[f](x) + r^m[f](x)$ and $r^m[f](x)$ is the Taylor remainder, the left hand side of the above inequality can 
-be repesented as
-
+point in the domain.
 
 $$
 \left|\int_{\Omega} w(x) (T^m[f](x) + r^m[f](x))\ dx - Q^m[f]\right| = \left|\int_{\Omega} w(x) r^m[f](x)\ dx\right|,
@@ -116,11 +130,11 @@ To be concrete, consider the degree three Gaussian cubature formula from
 {cite:t}`stroudSecrest1963` ($E_n^{r^2} \text{3-1}$ in {cite:p}`stroud1971`), which 
 exactly solves the following integral, for polynomial $f: \mathbb{R}^d \to \mathbb{R}$ of degree $m \le 3$,
 
-$$\int_{\mathbb{R}^d} f(\mathbf{x})dP(\mathbf{x}) = \frac{1}{Z_c} 
+$$\int_{\mathbb{R}^d} f(\boldsymbol{x})dP(\boldsymbol{x}) = \frac{1}{Z_c} 
 \int\dotsi\int_{\mathbb{R}^d} f(x_1, \dots, x_d)\exp(-x_1^2 \dots -x_d^2)dx_1 \dots dx_d$$
 
 where $P(x)$ is the probability measure of the $d\text{-dimensional}$ Gaussian 
-distribution $X \sim \mathcal{N}(\mathbf{0}, \text{diag}(1/2))$ and $Z_c$ is a 
+distribution $X \sim \mathcal{N}(\boldsymbol{0}, \text{diag}(1/2))$ and $Z_c$ is a 
 normalizing constant. If $Z_c$ is known, the above integral is the distribution's 
 expectation $\operatorname{E}\left[f(X)\right]$; when $f(X) = X^\alpha$, a monomial, the
 integral is the distribution's moment of degree $\sum_{i=1}^d \alpha_i$. Hence, the 
@@ -157,8 +171,8 @@ formula. To perform the required computation one must:
 
 Rather than doing this by hand, one can make use of {mod}`mccube.formulae` as 
 shown below:
-
-```{code-cell} ipython3
+<!-- #endregion -->
+```python
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -201,7 +215,7 @@ coefficients, this cubature formula can be adapted to any parametrization of the
 Gaussian distribution/weight (see pg 11 of {cite:p}`stroud1971` for details). Such a 
 transform can be trivially applied in {mod}`mccube.formulae`:
 
-```{code-cell} ipython3
+```python
 expected_mean = np.ones(d)
 expected_covariance = 5 * np.eye(d)
 cf_affine = StroudSecrest63_31(d, mean=expected_mean, covariance=expected_covariance)
@@ -213,16 +227,19 @@ Expected result:\n {expected_covariance}\n
 print(result_str)
 ```
 
-## ODE Cubature
-Readers are directed to the excelent {cite:p}`iserles2008` for a comprehensive 
-introduction to the generalization of quadrature formulae to ODE solving.
+## ODE Quadrature
+One may consider extending quadrature formulae, as described above, to the solution of systems of
+ordinary differential equations (ODEs)
 
-:::{warning}
-The remainder of this article is still under construction and should be assumed to be 
-wrong for now!
-:::
+$$
+\frac{\operatorname{d}\!\boldsymbol{f}(t)}{\operatorname{d}\!t} = \boldsymbol{g}(t, \boldsymbol{f}(t)),\quad t \ge t_0,\quad \boldsymbol{f}(t_0) = \boldsymbol{f}_0,
+$$
 
-+++
+where $\boldsymbol{g}\colon [t_0, \infty) \times \mathbb{R}^d \to \mathbb{R^d}$ is at least Lipschitz continuous, $\boldsymbol{f}\colon [t_0, \infty) \to \mathbb{R}^d$ is the *solution*, and $\boldsymbol{f}_0 \in \mathbb{R}^d$ is a given *initial condition*. 
+
+Assuming that $\boldsymbol{g}$ is sufficiently smooth, one can Taylor expand about $t_0$ to obtain
+
+
 
 ## SDE Cubature
 The equivalent SDE cubature of degree three extends the above example to the moments of an 
@@ -233,7 +250,7 @@ $$X_t^i = X^i_{t_0} + \int_{0}^{t}a^i(t, X_s)ds + \int_{0}^{t}b^{i,j}(t, X_s) dW
 
 and alternatively the Itô SDE $dX^i_t = a^i(t, X_t)dt + b^{i,j}(t, X_t)dW^{j}_t$, 
 where in this case $a^i(t, X_t) = 0$, $b^{i,j}(t, X_t) = \sqrt{\delta_{ij}/2}$, and 
-$X^{i}_{t_0} \sim \mathcal{N}(\mathbf{0}, \delta_{ij}/2)$ is the initial condition. 
+$X^{i}_{t_0} \sim \mathcal{N}(\boldsymbol{0}, \delta_{ij}/2)$ is the initial condition. 
 
 If one looks at the process at a single point in time $T$, and knows the corresponding
 random variable $X_{t=T}$ is Gaussian, then its moments can be computed as per the 
@@ -271,4 +288,6 @@ transition kernel that employs recombination to maintain the path/particle count
 every time step. Note that in MCCube the paths are usually interpreted as particle 
 trajectories, as this provides a consistent physically analogy.
 
-+++
+
+
+
