@@ -1,8 +1,8 @@
 mccube
-jupytext==1.15.0
+jupytext==1.15.2
 myst_nb==0.17.2
 sphinx==5.3.0
 sphinx-book-theme==1.0.1
 sphinx-design==0.5.0
 sphinx-math-dollar==1.2.1
-sphinxcontrib-bibtex==2.5.0
+sphinxcontrib-bibtex==2.6.1

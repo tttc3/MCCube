@@ -186,12 +186,11 @@ Some other Python/JAX packages that you may find interesting:
 - `Lineax <https://github.com/google/lineax>`_ A JAX library for linear solves and linear least squares.
 - `OTT-JAX <https://github.com/ott-jax/ott>`_ A JAX library for optimal transport.
 
-
 .. toctree::
     :hidden:
     :caption: Getting Started
 
-    MCC From Scratch <fromscratch.rst>
+    MCC From Scratch <fromscratch.md>
 
 .. toctree::
     :hidden:
