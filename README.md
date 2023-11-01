@@ -75,19 +75,15 @@ from mccube.metrics import cubature_target_error
 # Setup the problem.
 n_particles = 8192
 target_dimension = 2
-
 rng = np.random.default_rng(42)
 prior_particles = rng.uniform(size=(n_particles, target_dimension))
 target_mean = 2 * np.ones(target_dimension)
 target_cov = 3 * np.diag(target_mean)
-
-
-# MCCube expects the logdensity to have call signature (t, p(t), args), allowing the
+# MCCube expects the log-density to have call signature (t, p(t), args), allowing the
 # density to be time dependant, or to rely on some other generic args.
 # Note: You can obtain significantly better performance by defining a custom jvp here.
 def target_logdensity(t, p, args):
     return multivariate_normal.logpdf(p, target_mean, target_cov)
-
 
 # Setup the MCCubature.
 recombinator_key = jax.random.PRNGKey(42)
@@ -96,14 +92,12 @@ cs = MCCubatureStep(
     propagator=LangevinDiffusionPropagator(cfv),
     recombinator=MonteCarloRecombinator(recombinator_key),
 )
-
 # Construct the MCCubature/solve for the MCCubature paths.
 mccubature_paths = mccubaturesolve(
     logdensity=target_logdensity,
     transition_kernel=cs,
     initial_particles=prior_particles,
 )
-
 # Compare mean and covariance of the inferred cubature to the target.
 posterior_particles = mccubature_paths.particles[-1, :, :]
 mean_err, cov_err = cubature_target_error(posterior_particles, target_mean, target_cov)

@@ -57,13 +57,8 @@ intersphinx_disabled_reftypes = ["*"]
 
 # AutoDoc configuration
 add_module_names = False
-autosummary_generate = False
-autodoc_typehints = "signature"
-autodoc_typehints_format = "short"
-autodoc_type_aliases = {
-    "ArrayLike": "ArrayLike",
-}
-napolean_use_rtype = False
+autodoc_typehints = "description"
+autodoc_member_order = "bysource"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -79,16 +74,14 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_book_theme"
+html_theme = "furo"
 html_theme_options = {
-    "repository_url": "https://github.com/tttc3/MCCube",
-    "use_repository_button": True,
-    "use_download_button": False,
-    "show_toc_level": 2,
     "announcement": (
         "⚠️ MCCube is currently a work in-progress, expect changes, sharp edges, "
         "and treat all results with a healthy degree of skepticism! ⚠️"
     ),
+    # Visual options
+    "sidebar_hide_name": True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -98,9 +91,10 @@ html_static_path = ["_static"]
 html_title = "MCCube: Markov Chain Cubature via JAX"
 html_logo = "_static/logo.svg"
 html_favicon = "_static/logo.svg"
+html_show_sphinx = False
 html_css_files = ["custom.css"]
 
-source_suffix = {".rst": "restructuredtext", ".ipynb": "myst-nb", ".md": "myst-nb"}
+source_suffix = {".rst": "restructuredtext", ".md": "myst-nb"}
 
 nb_execution_mode = "auto"
 nb_execution_timeout = 300
