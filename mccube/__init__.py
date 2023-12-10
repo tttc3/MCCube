@@ -8,15 +8,21 @@ from mccube.components import (
     WrappedPropagator,
     WrappedRecombinator,
 )
-from mccube.cubature import MCCubatureStep, mccubaturesolve
-from mccube.formulae import minimal_cubature_formula
+from mccube.inference import MCCubatureStep, mccubaturesolve
+from mccube.formulae import search_cubature_registry
+
+from mccube.regions import AbstractRegion, GaussianRegion, WienerSpace
 
 __all__ = [
     # Base
     "mccubaturesolve",
     "MCCubatureStep",
+    # Regions
+    "AbstractRegion",
+    "GaussianRegion",
+    "WienerSpace",
     # Formulae
-    "minimal_cubature_formula",
+    "search_cubature_registry",
     # Components
     "AbstractPropagator",
     "AbstractRecombinator",

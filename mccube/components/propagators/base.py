@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Callable, Sequence, overload
+from typing import Callable, Sequence, override
 
 import chex
 import equinox as eqx
@@ -24,7 +24,7 @@ class AbstractPropagator(AbstractComponent):
     3. The transformation **must not reduce the particle count** ($m \ge n$).
     """  # noqa: E501
 
-    @overload
+    @override
     def transform(
         self,
         logdensity: Callable[[float, PyTree, PyTree], PyTree],

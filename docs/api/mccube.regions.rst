@@ -12,19 +12,10 @@ The following regions are implemented:
 
     AbstractRegion
     GaussianRegion
-    StandardGaussianRegion
     WienerSpace
 
 .. autoclass:: AbstractRegion
-    :members:
-    :private-members:
 
 .. autoclass:: GaussianRegion
-    :special-members: __init__
-    :private-members:
-
-.. autoclass:: StandardGaussianRegion
 
 .. autoclass:: WienerSpace
-
-.. autofunction:: psd_quadratic_transformation
