@@ -5,11 +5,10 @@ from typing import Callable
 
 import jax
 import jax.tree_util as jtu
-from jax._src.random import KeyArray
-from jaxtyping import PyTree
+from jaxtyping import PyTree, PRNGKeyArray
 
 from mccube.components.recombinators.base import AbstractRecombinator
-from mccube.utils import no_operation, split_by_tree
+from mccube.utils import no_operation, split_by_tree, force_bitcast_convert_type
 
 
 class MonteCarloRecombinator(AbstractRecombinator):
@@ -22,26 +21,32 @@ class MonteCarloRecombinator(AbstractRecombinator):
             Without replacement is usually significantly slower.
     """
 
-    key: KeyArray
+    key: PRNGKeyArray
     weighting_function: Callable = no_operation
     with_replacement: bool = True
 
     def transform(
         self,
-        key: KeyArray,
+        key: PRNGKeyArray,
         recombination_factor: int | float,
         time: float,
         particles: PyTree,
         args: PyTree,
     ) -> PyTree:
-        recombined_point_count = particles.shape[0] // recombination_factor
-        weights = self.weighting_function(particles)
-        return jax.random.choice(
+        recombined_point_count = (
+            particles.shape[0] * particles.shape[1] // recombination_factor
+        )
+        reshaped_particles = particles.reshape(-1, *particles.shape[2:])
+        weights = self.weighting_function(reshaped_particles)
+        selected = jax.random.choice(
             key,
-            particles,
+            reshaped_particles,
             (recombined_point_count,),
             self.with_replacement,
             weights,
+        )
+        return selected.reshape(
+            recombined_point_count // particles.shape[1], *particles.shape[1:]
         )
 
     def __call__(
@@ -51,7 +56,8 @@ class MonteCarloRecombinator(AbstractRecombinator):
         particles: PyTree,
         args: PyTree,
     ) -> PyTree:
-        key = jax.random.fold_in(self.key, time)
+        time_ = force_bitcast_convert_type(time, jax.numpy.int32)
+        key = jax.random.fold_in(self.key, time_)
         keys = split_by_tree(key, particles)
         return jtu.tree_map(
             lambda key, particles: self.transform(

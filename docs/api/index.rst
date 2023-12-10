@@ -1,12 +1,16 @@
 API Reference
 =============
 
-A complete listing of all public parts of the MCC API can be found below:
+A complete listing of all public parts of the MCCube API can be found below:
+
+
+.. rubric:: Markov chain cubature framework
+
+
+.. rubric:: Cubature library
 
 .. toctree::
-    :includehidden:
-    :maxdepth: 4
+    :maxdepth: 2
 
-    mccube.cubature
-    mccube.formulae
     mccube.regions
+    mccube.formulae

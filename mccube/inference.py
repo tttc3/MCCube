@@ -48,8 +48,15 @@ class MCCubatureStep(AbstractPropagator):
         propagator: a Propagator component.
         recombinator: a Recombinator component.
     """
-    propagator: AbstractPropagator = WrappedPropagator()
-    recombinator: AbstractRecombinator = WrappedRecombinator()
+    propagator: AbstractPropagator
+    recombinator: AbstractRecombinator
+
+    def __init__(
+        self, propagator=WrappedPropagator(), recombinator=WrappedRecombinator()
+    ):
+        self.terms = propagator
+        self.propagator = propagator
+        self.recombinator = recombinator
 
     def transform(
         self,
@@ -112,7 +119,7 @@ def mccubaturesolve(
     dt: float = 1.0,
     visualization_callback: Callable[[MCCubatureState], None] | None = None,
 ) -> PyTree[MCCubatureState]:
-    r"""Fixed-timestep MCCubature construction/inference/solution loop.
+    r"""Fixed-timestep MCCubature inference/solution loop.
 
     Constructs and evaluates an MCCubature by iterative application of a
     `transition_kernel`/:class:`MCCubatureStep`.
