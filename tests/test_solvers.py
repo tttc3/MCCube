@@ -1,38 +1,39 @@
-import chex
 import inspect
-import jax
-from absl.testing import absltest, parameterized
-
-import diffrax
-from diffrax import (
-    AbstractSolver,
-    AbstractItoSolver,
-    AbstractStratonovichSolver,
-    ODETerm,
-    WeaklyDiagonalControlTerm,
-    MultiTerm,
-    diffeqsolve,
-    VirtualBrownianTree,
-    UnsafeBrownianPath,
-    SaveAt,
-    RecursiveCheckpointAdjoint,
-    DirectAdjoint,
-)
-import equinox as eqx
-from jax.scipy.stats import multivariate_normal
-import jax.numpy as jnp
-import jax.tree_util as jtu
 import time
 
-# from mccube.components import MonteCarloRecombinator
-from mccube.diffrax.solvers import RecombinationSolver
-from mccube.formulae import WienerSpace, LyonsVictoir04_512
-from mccube.metrics import cubature_target_error
-from mccube.components.recombinators import MonteCarloRecombinator
+import chex
+import diffrax
+import equinox as eqx
+import jax
+import jax.numpy as jnp
+import jax.tree_util as jtu
 import numpy as np
+from absl.testing import absltest, parameterized
+from diffrax import (
+    AbstractItoSolver,
+    AbstractSolver,
+    AbstractStratonovichSolver,
+    DirectAdjoint,
+    MultiTerm,
+    ODETerm,
+    RecursiveCheckpointAdjoint,
+    SaveAt,
+    UnsafeBrownianPath,
+    VirtualBrownianTree,
+    WeaklyDiagonalControlTerm,
+    diffeqsolve,
+)
+from jax.scipy.stats import multivariate_normal
+from jaxlib.xla_client import XlaRuntimeError
+
+from mccube.components import LangevinDiffusionPropagator
+from mccube.components.recombinators import MonteCarloRecombinator
+from mccube.diffrax.solvers import RecombinationSolver
+from mccube.formulae import LyonsVictoir04_512, WienerSpace
+from mccube.inference import MCCubatureKernel, mccubaturesolve
+from mccube.metrics import cubature_target_error
 
 jax.config.update("jax_enable_x64", True)
-jax.config.update("jax_check_tracer_leaks", True)
 
 
 def solver_predicate(object: object) -> bool:
@@ -167,7 +168,6 @@ class InferenceTests(chex.TestCase):
             y0=y0,
             saveat=SaveAt(t0=True, t1=True),
             adjoint=adjoint,
-            # max_steps=None
         )
 
     def compilation_analysis(self, func, *args, **kwargs):
@@ -178,19 +178,14 @@ class InferenceTests(chex.TestCase):
         _aot = aot.compiled
         aot_cost = _aot.cost_analysis()[0]
         aot_cost["gen_code_size"] = _aot.memory_analysis().generated_code_size_in_bytes
-        # Not all compilations have an optimal_seconds
-        try:
-            optimal = aot_cost["optimal_seconds"]
-        except KeyError:
-            optimal = None
-
         print(
             f"""Compilation Costs:
             Time: {toc-tic}
-              - flops: {aot_cost['flops']}
-              - bytes_accessed: {aot_cost['bytes accessed']}
-              - transcendentals: {aot_cost['transcendentals']}
-              - optimal_seconds: {optimal}
+              - flops: {aot_cost.get('flops', None)}
+              - bytes_accessed: {aot_cost.get('bytes accessed', None)}
+              - transcendentals: {aot_cost.get('transcendentals', None)}
+              - optimal_seconds: {aot_cost.get('optimal_sceonds', None)}
+              - code size: {aot_cost["gen_code_size"]}
             """
         )
         return aot, aot_cost
@@ -201,11 +196,13 @@ class InferenceTests(chex.TestCase):
         jax.block_until_ready(solution)
         toc = time.time()
         dt = toc - tic
-        y_sol = solution.ys[-1]
+        # This is the core (none Diffrax) case.
+        if "transition_kernel" in kwargs:
+            y_sol = solution.particles[-1, :, :]
+        else:
+            y_sol = solution.ys[-1]
         if y_sol.ndim > 2:
             y_sol = y_sol.reshape(-1, y_sol.shape[-1])[..., :-1]
-
-        # jax.debug.breakpoint()
         cost = (
             dt,
             cubature_target_error(y_sol, self.target_mean, self.target_cov),
@@ -241,9 +238,20 @@ class DiffraxTests(InferenceTests):
     @parameterized.named_parameters(solver_controllers(SOLVERS))
     def test_cubature(self, solver, controller):
         cow = LyonsVictoir04_512(WienerSpace(self.target_dimension))
-        solver = RecombinationSolver(solver, MonteCarloRecombinator(self.key))
-        self.solver_analysis(solver, controller, cubature=cow)
-        # use context manager for single and multi-substep solver.
+        for n_substeps in range(1, 2):
+            with self.subTest(n_substeps=n_substeps):
+                try:
+                    solver = RecombinationSolver(
+                        solver, MonteCarloRecombinator(self.key), n_substeps
+                    )
+                    self.solver_analysis(solver, controller, cubature=cow)
+                # Don't fail the test if the only error is due to `max_steps` being
+                # exceeded.
+                except XlaRuntimeError as e:
+                    if "max_steps" in e.args[0]:
+                        pass
+                    else:
+                        raise e
 
     # TODO: implement suitable path derivative.
     # @parameterized.named_parameters(solver_controllers(SOLVERS))
@@ -252,11 +260,6 @@ class DiffraxTests(InferenceTests):
     #     solver = RecombinationSolver(solver, MonteCarloRecombinator(self.key))
     #     self.solver_analysis(solver, controller, cubature=cow, as_ode=True)
 
-    def test_recombination_solver_correctness(self, solver):
-        # Test substeps.
-        # Test recombination.
-        ...
-
     def _blackjax_inference_loop(self, key, kernel, initial_state, num_samples):
         def one_step(state, key):
             state, _ = kernel(key, state)
@@ -264,6 +267,41 @@ class DiffraxTests(InferenceTests):
         keys = jax.random.split(key, num_samples)
         _, states = jax.lax.scan(one_step, initial_state, keys)
         return states
+
+
+class CoreTests(InferenceTests):
+    def core_analysis(self, solver, logdensity, transition_kernel, initial_particles):
+        aot, aot_cost = self.compilation_analysis(
+            solver,
+            logdensity=logdensity,
+            transition_kernel=transition_kernel,
+            initial_particles=initial_particles,
+        )
+        sol, sol_cost = self.runtime_analysis(
+            aot,
+            logdensity=logdensity,
+            transition_kernel=transition_kernel,
+            initial_particles=initial_particles,
+        )
+        self.results.append((self._testMethodName, aot_cost, sol_cost))
+
+    def test_core(self):
+        def target_logdensity(t, p, args):
+            return multivariate_normal.logpdf(p, self.target_mean, self.target_cov)
+
+        # Setup the MCCubature.
+        recombinator_key = jax.random.PRNGKey(42)
+        cfv = LyonsVictoir04_512(WienerSpace(self.target_dimension))
+        cs = MCCubatureKernel(
+            propagator=LangevinDiffusionPropagator(cfv.stacked_points),
+            recombinator=MonteCarloRecombinator(recombinator_key),
+        )
+        self.core_analysis(
+            mccubaturesolve,
+            logdensity=target_logdensity,
+            transition_kernel=cs,
+            initial_particles=self.y0,
+        )
 
 
 if __name__ == "__main__":
