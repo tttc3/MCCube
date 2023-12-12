@@ -25,6 +25,15 @@ from scipy.linalg import hadamard
 
 from mccube.regions import AbstractRegion, GaussianRegion, WienerSpace
 
+# Provide handling for the optional compatibility with Diffrax. This avoids requiring
+# Diffrax as a hard dependency.
+try:
+    from diffrax import AbstractBrownianPath
+except ImportError:
+
+    class AbstractBrownianPath:
+        pass
+
 
 class _CubatureRegistryMeta(eqx._module._ModuleMeta):
     """Metaclass to register each cubature formulae in a searchable registry."""
@@ -408,7 +417,7 @@ def _generate_point_permutations(
     return unique_generated_points
 
 
-class AbstractWienerCubature(AbstractCubature):
+class AbstractWienerCubature(AbstractCubature, AbstractBrownianPath):
     defined_region: ClassVar[AbstractRegion] = WienerSpace
 
     # Provides Diffrax path compatibility.
@@ -433,7 +442,6 @@ class AbstractWienerCubature(AbstractCubature):
         weights TODO: add example.
 
         The remainder of this docstring is copied from :ref:`Diffrax <https://docs.kidger.site/diffrax/api/path/#diffrax.AbstractPath>`.
-
 
         Args:
             t0: Any point in $[t_0, t_1]$ at which to evaluate the paths.

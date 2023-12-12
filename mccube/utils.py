@@ -25,26 +25,6 @@ def identity_validator(transform: Type[T]) -> T:
 
 @dataclasses.dataclass(frozen=True)
 class if_valid_array:
-    """Returns a callable that returns the specified integer if evaluated on an array of
-    dimension greater than the specified integer. Otherwise, it returns `None`.
-
-    !!! Example
-
-        ```python
-        # First using `if_array` and then `if_valid_array`.
-        fn = if_array(1)
-        fn_valid = if_valid_array(1)
-        # Passed an array, return the integer.
-        fn(jax.numpy.array([0,1,2]))  # 1
-        # Passed an array whose dimension is not greater than the integer, return None.
-        fn_valid(jax.numpy.array([0,1,2])  # None
-        # `True` is not-an-array, return None.
-        fn(True)  # None
-        fn2(True)  # None
-        ```
-
-    """
-
     axis: int
 
     def __call__(self, x: Any) -> Optional[int]:
@@ -53,13 +33,10 @@ class if_valid_array:
 
 @dataclasses.dataclass(frozen=True)
 class is_valid_array:
-    """Returns `True` if `element` is a JAX array or NumPy array of sufficient dimension
-    to be indexed along the given axis."""
-
     axis: int
 
     def __call__(self, x: Any) -> bool:
-        return eqx.is_array(x) and x.ndim > self.axis
+        return eqx.is_array(x) and x.ndim - abs(self.axis) > 0
 
 
 # Below code is taken from Diffrax https://github.com/patrick-kidger/diffrax/blob/f101e75976e9dea86eb57f028f1f3bed646af1db/diffrax/misc.py#L155
