@@ -32,6 +32,7 @@ from mccube.components.recombinators import MonteCarloRecombinator
 import numpy as np
 
 jax.config.update("jax_enable_x64", True)
+jax.config.update("jax_check_tracer_leaks", True)
 
 
 def solver_predicate(object: object) -> bool:
@@ -51,18 +52,22 @@ SDE_SOLVERS = {
 
 
 def solver_controllers(
-    solvers=SOLVERS, sde_only=True, include_adaptive=True
+    solvers=SOLVERS, sde_only=True, include_adaptive=True, include_sympletic=False
 ) -> set[tuple[str, diffrax.AbstractSolver, diffrax.AbstractStepSizeController]]:
     """Generate name, solver, controller tuples from a set of diffrax.AbstractSolvers."""
     adaptive = {x for x in solvers if issubclass(x[1], diffrax.AbstractAdaptiveSolver)}
     non_adaptive = solvers - adaptive
+    symplectic = {x for x in solvers if issubclass(x[1], diffrax.SemiImplicitEuler)}
+    if not include_sympletic:
+        non_adaptive -= symplectic
     non_adaptive_solver_controler = {
         (i, v(), diffrax.ConstantStepSize()) for i, v in non_adaptive
     }
     # Adaptive solvers and special case of HalfSolver.
     adaptive -= {x for x in solvers if issubclass(x[1], diffrax.HalfSolver)}
+    # Note that the error order here is a placeholder for testing purposes only.
     PID_controller = diffrax.PIDController(
-        rtol=1e-1, atol=1e-2, pcoeff=0.1, icoeff=0.3, dcoeff=0
+        rtol=1e-1, atol=1e-2, pcoeff=0.1, icoeff=0.3, dcoeff=0, error_order=1.0
     )
     adaptive_solver_controler = {(i, v(), PID_controller) for i, v in adaptive}
     for i, v in non_adaptive:
@@ -85,8 +90,8 @@ class InferenceTests(chex.TestCase):
         # Solver settings
         self.key = jax.random.PRNGKey(42)
         self.particles = 2
-        self.epochs = 512
-        self.dt0 = 0.00001
+        self.epochs = 256
+        self.dt0 = 0.0001
         self.t0 = 0.0
         self.t1 = self.epochs * self.dt0
         self.y0 = jax.random.multivariate_normal(
@@ -233,11 +238,12 @@ class DiffraxTests(InferenceTests):
     def test_baseline_unsafe(self, solver, controller):
         self.solver_analysis(solver, controller, unsafe=True)
 
-    @parameterized.named_parameters(solver_controllers(SDE_SOLVERS))
+    @parameterized.named_parameters(solver_controllers(SOLVERS))
     def test_cubature(self, solver, controller):
         cow = LyonsVictoir04_512(WienerSpace(self.target_dimension))
         solver = RecombinationSolver(solver, MonteCarloRecombinator(self.key))
         self.solver_analysis(solver, controller, cubature=cow)
+        # use context manager for single and multi-substep solver.
 
     # TODO: implement suitable path derivative.
     # @parameterized.named_parameters(solver_controllers(SOLVERS))
