@@ -33,7 +33,7 @@ class MCCubatureState(eqx.Module):
     args: PyTree
 
 
-class MCCubatureStep(AbstractPropagator):
+class MCCubatureKernel(AbstractPropagator):
     r"""Shape preserving (non-expanding) MCCubature step/transition kernel.
 
     `MCCubatureStep` automatically computes the recombination factor such that the
@@ -54,7 +54,6 @@ class MCCubatureStep(AbstractPropagator):
     def __init__(
         self, propagator=WrappedPropagator(), recombinator=WrappedRecombinator()
     ):
-        self.terms = propagator
         self.propagator = propagator
         self.recombinator = recombinator
 
@@ -110,7 +109,7 @@ class MCCubatureStep(AbstractPropagator):
 
 def mccubaturesolve(
     logdensity: Callable[[float, PyTree, PyTree], PyTree],
-    transition_kernel: MCCubatureStep | AbstractPropagator,
+    transition_kernel: MCCubatureKernel | AbstractPropagator,
     initial_particles: Float[Array, "n d"],
     args: PyTree | None = None,
     epochs: int = 500,

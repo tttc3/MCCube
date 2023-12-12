@@ -48,6 +48,9 @@ class RecombinationSolver(AbstractWrappedSolver):
     recombination_kernel: Callable[[PyTree, Scalar, PyTree, PyTree], PyTree]
     n_substeps: int = 2
 
+    def __check_init__(self):
+        assert self.n_substeps >= 1
+
     @property
     def term_structure(self):
         return self.solver.term_structure
@@ -182,12 +185,9 @@ class RecombinationSolver(AbstractWrappedSolver):
             return *_sol[:-1], jnp.max(_sol[-1])
 
         init_state = _init_fn(y0)
+        out_state = init_state
         if self.n_substeps > 1:
             out_state = jax.lax.fori_loop(1, self.n_substeps, _body_fn, init_state)
-        elif self.n_substeps == 1:
-            out_state = init_state
-        else:
-            raise ValueError(f"`n_substeps` must be >= 1; got {self.n_substeps}.")
 
         ## Perform recombination to control the size of the leading axis. Both the
         # result `y1` and error estimate `y_error` are subject to recombination.
