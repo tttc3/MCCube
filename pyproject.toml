@@ -1,7 +1,3 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
 name = "mccube"
 version = "0.0.1"
@@ -28,12 +24,12 @@ classifiers = [
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "chex>=0.1.81",
-    "equinox>=0.10.3",
-    "jax>=0.4.6",
-    "jaxlib>=0.4.6",
-    "jaxtyping>=0.2.15",
-    "typing_extensions>=4.7.1",
+    "chex>=0.1.85",
+    "diffrax>=0.4.1",
+    "equinox>=0.11.1",
+    "jax>=0.4.23",
+    "jaxlib>=0.4.23",
+    "jaxtyping>=0.2.25",
 ]
 
 [project.urls]
@@ -43,14 +39,12 @@ repository = "https://github.com/tttc3/mccube"
 
 [project.optional-dependencies]
 extras = [
-    "diffrax>=0.4.0",
     "tensorboardX>=2.6.2",
 ]
 
 test = [
     "absl-py",
     "pytest",
-    "sympy",
 ]
 
 dev = [
@@ -59,18 +53,28 @@ dev = [
     "pre-commit"
 ]
 
-[tool.hatch.metadata]
-allow-direct-references = true
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.hatch.version]
-path = "mccube/__init__.py"
+[tool.hatch.build]
+include = ["mccube/*"]
+
+[tool.pytest.ini_options]
+addopts = "--jaxtyping-packages=mccube,beartype.beartype(conf=beartype.BeartypeConf(strategy=beartype.BeartypeStrategy.On))"
 
 [tool.jupytext]
 formats = "ipynb,md"
 
 [tool.ruff]
-ignore = ["F722"]
+extend-include = ["*.ipynb"]
 fixable = ["I001", "F401"]
+ignore = ["F722"]
 
 [tool.ruff.isort]
-extra-standard-library=["typing_extensions"]
+combine-as-imports = true
+order-by-type = false
+
+[tool.pyright]
+reportIncompatibleMethodOverride = false
+include = ["mccube"]

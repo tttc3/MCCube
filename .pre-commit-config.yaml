@@ -1,16 +1,15 @@
 repos:
-  - repo: https://github.com/ambv/black
-    rev: 23.7.0
-    hooks:
-    - id: black
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.1.6'
+    rev: v0.1.9
     hooks:
       - id: ruff
-  - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.7.0
-    hooks:
-      - id: nbqa-black
-        additional_dependencies: [jupytext, black]
-      - id: nbqa-isort
-      - id: nbqa-ruff
+        types_or: [ python, pyi, jupyter ]
+        args: [ --fix ]
+      - id: ruff-format
+        types_or: [ python, pyi, jupyter ]
+  # TODO: Enable in next release.
+  # - repo: https://github.com/RobertCraigie/pyright-python
+  #   rev: v1.1.342
+  #   hooks:
+  #   - id: pyright
+  #     additional_dependencies: [equinox, diffrax, jax, jaxtyping, pytest]

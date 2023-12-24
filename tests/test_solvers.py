@@ -23,21 +23,30 @@ from diffrax import (
     WeaklyDiagonalControlTerm,
     diffeqsolve,
 )
+from diffrax.integrate import AbstractStepSizeController
 from jax.scipy.stats import multivariate_normal
 from jaxlib.xla_client import XlaRuntimeError
 
-from mccube.components import LangevinDiffusionPropagator
-from mccube.components.recombinators import MonteCarloRecombinator
-from mccube.diffrax.solvers import RecombinationSolver
-from mccube.formulae import LyonsVictoir04_512, WienerSpace
-from mccube.inference import MCCubatureKernel, mccubaturesolve
+from mccube import (
+    AbstractWienerCubature,
+    LyonsVictoir04_512,
+    MonteCarloKernel,
+    WienerSpace,
+    mccubaturesolve,
+    MCCubatureSolver,
+    OverdampedLangevinKernel,
+    MCCubatureState,
+)
 from mccube.metrics import cubature_target_error
+from mccube._custom_types import P, Args, CubaturePointsTree, RealScalarLike
 
 jax.config.update("jax_enable_x64", True)
 
 
 def solver_predicate(object: object) -> bool:
     is_class = inspect.isclass(object)
+    is_solver = False
+    is_not_abstract = False
     if is_class:
         is_solver = issubclass(object, AbstractSolver)
         is_not_abstract = "Abstract" not in object.__name__
@@ -92,13 +101,13 @@ class InferenceTests(chex.TestCase):
         self.key = jax.random.PRNGKey(42)
         self.particles = 2
         self.epochs = 256
-        self.dt0 = 0.0001
+        self.dt0 = 0.05
         self.t0 = 0.0
         self.t1 = self.epochs * self.dt0
         self.y0 = jax.random.multivariate_normal(
             self.key,
-            self.target_mean - 2,
-            self.target_cov / 3,
+            np.ones(self.target_dimension),
+            np.eye(self.target_dimension),
             shape=(self.particles,),
         )
         # Open a file for writing the results
@@ -107,32 +116,49 @@ class InferenceTests(chex.TestCase):
     def tearDown(self) -> None:
         print(self.results, file=open("out.txt", "+w"))
 
-    def ula_cde(self, unsafe=False, cubature=None, as_ode=False):
+    def y0_cubature_transform(self, y0, cubature: AbstractWienerCubature | None = None):
+        if cubature:
+            weights = np.zeros_like(y0[..., 0])
+            y0 = np.concatenate([y0, weights[..., None]], -1)[:, None, :]
+            y0 = np.tile(y0, (1, cubature.point_count, 1))
+        return y0
+
+    def ula_vfs(self, cubature: AbstractWienerCubature | None = None):
         @eqx.filter_vmap
         @eqx.filter_grad
-        def target_grad_logdensity(p):
+        def target_grad_logdensity(p: CubaturePointsTree) -> CubaturePointsTree:
             return multivariate_normal.logpdf(p, self.target_mean, self.target_cov)
 
-        def ode_vf(t, p, args):
+        def _ode_vf(t: RealScalarLike, p: P, args: Args) -> P:
             return target_grad_logdensity(p)
 
-        ode = ODETerm(ode_vf)
+        ode_vf = _ode_vf
         # Make adjustment to the vector field to handle cubature weights.
         if cubature:
 
-            def ode_vf_cubature(t, p, args):
-                points = p[0, ..., :-1]
-                weights = jnp.expand_dims(p[0, ..., -1], -1)
-                updated_points = ode_vf(t, points, args)
+            def _ode_vf_cubature(t: RealScalarLike, p: P, args: Args) -> P:
+                points = p[0, ..., :-1][None, ...]
+                weights = jnp.expand_dims(p[0, ..., -1], -1)[None, ...]
+                updated_points = _ode_vf(t, points, args)
                 new_p = jnp.concatenate([updated_points, weights], -1)
-                return jnp.tile(new_p, (cubature.point_count, 1))
+                new_tiled_p = jnp.tile(new_p, (cubature.point_count, 1))
+                return new_tiled_p
 
-            ode = ODETerm(ode_vf_cubature)
+            ode_vf = _ode_vf_cubature
 
-        def cde_vf(t, p, args):
-            return np.sqrt(2.0)
+        def cde_vf(t: RealScalarLike, p: P, args: Args) -> P:
+            return jnp.sqrt(2.0)
 
-        y0 = self.y0
+        return ode_vf, cde_vf
+
+    def ula_cde(
+        self,
+        solver: AbstractSolver,
+        controller: AbstractStepSizeController,
+        unsafe: bool = False,
+        cubature: AbstractWienerCubature | None = None,
+    ):
+        ode_vf, cde_vf = self.ula_vfs(cubature)
         adjoint = RecursiveCheckpointAdjoint()
 
         key, _ = jax.random.split(self.key)
@@ -145,28 +171,23 @@ class InferenceTests(chex.TestCase):
         )
         if cubature:
             cde_path = cubature
-            weights = np.zeros_like(y0[..., 0])
-            y0 = np.concatenate([y0, weights[..., None]], -1)[:, None, :]
-            y0 = np.tile(y0, (1, cubature.point_count, 1))
-
         elif unsafe:
             cde_path = UnsafeBrownianPath(
                 shape=(self.particles, self.target_dimension), key=key
             )
             adjoint = DirectAdjoint()
+        ode = ODETerm(ode_vf)
         cde = WeaklyDiagonalControlTerm(cde_vf, cde_path)
-        # if as_ode:
-        #     cde = cde.to_ode()
         controlled_differential_equation = MultiTerm(ode, cde)
-
         return jtu.Partial(
             diffeqsolve,
-            terms=controlled_differential_equation,
-            t0=self.t0,
-            t1=self.t1,
-            dt0=self.dt0,
-            y0=y0,
+            controlled_differential_equation,
+            solver,
+            self.t0,
+            self.t1,
+            self.dt0,
             saveat=SaveAt(t0=True, t1=True),
+            stepsize_controller=controller,
             adjoint=adjoint,
         )
 
@@ -197,8 +218,8 @@ class InferenceTests(chex.TestCase):
         toc = time.time()
         dt = toc - tic
         # This is the core (none Diffrax) case.
-        if "transition_kernel" in kwargs:
-            y_sol = solution.particles[-1, :, :]
+        if isinstance(solution, MCCubatureState):
+            y_sol = solution.particles[-1, :, 0, :-1]
         else:
             y_sol = solution.ys[-1]
         if y_sol.ndim > 2:
@@ -211,40 +232,45 @@ class InferenceTests(chex.TestCase):
         return solution, cost
 
     def solver_analysis(
-        self, solver, controller, unsafe=False, cubature=None, as_ode=False
+        self,
+        solver: AbstractSolver,
+        controller: AbstractStepSizeController,
+        y0: P,
+        unsafe: bool = False,
+        cubature: AbstractWienerCubature | None = None,
     ):
-        func = self.ula_cde(unsafe, cubature, as_ode)
-        aot, aot_cost = self.compilation_analysis(
-            func, solver=solver, stepsize_controller=controller
-        )
-        sol, sol_cost = self.runtime_analysis(
-            aot, solver=solver, stepsize_controller=controller
-        )
+        """Determine the ahead-of-time compilation costs and runtime costs."""
+        func = self.ula_cde(solver, controller, unsafe, cubature)
+        aot, aot_cost = self.compilation_analysis(func, y0)
+        sol, sol_cost = self.runtime_analysis(aot, y0)
         self.results.append((self._testMethodName, aot_cost, sol_cost))
 
 
 class DiffraxTests(InferenceTests):
     @parameterized.named_parameters(solver_controllers(SDE_SOLVERS))
     def test_baseline_virtual(self, solver, controller):
-        self.solver_analysis(solver, controller)
+        y0 = self.y0_cubature_transform(self.y0)
+        self.solver_analysis(solver, controller, y0)
 
     # Won't work for adaptive solvers.
     @parameterized.named_parameters(
         solver_controllers(SDE_SOLVERS, include_adaptive=False)
     )
     def test_baseline_unsafe(self, solver, controller):
-        self.solver_analysis(solver, controller, unsafe=True)
+        y0 = self.y0_cubature_transform(self.y0)
+        self.solver_analysis(solver, controller, y0, unsafe=True)
 
     @parameterized.named_parameters(solver_controllers(SOLVERS))
     def test_cubature(self, solver, controller):
         cow = LyonsVictoir04_512(WienerSpace(self.target_dimension))
-        for n_substeps in range(1, 2):
+        for n_substeps in range(1, 3):
             with self.subTest(n_substeps=n_substeps):
+                y0 = self.y0_cubature_transform(self.y0, cow)
+                _solver = MCCubatureSolver(
+                    solver, MonteCarloKernel(y0.shape, self.key), n_substeps
+                )
                 try:
-                    solver = RecombinationSolver(
-                        solver, MonteCarloRecombinator(self.key), n_substeps
-                    )
-                    self.solver_analysis(solver, controller, cubature=cow)
+                    self.solver_analysis(_solver, controller, y0, cubature=cow)
                 # Don't fail the test if the only error is due to `max_steps` being
                 # exceeded.
                 except XlaRuntimeError as e:
@@ -253,54 +279,31 @@ class DiffraxTests(InferenceTests):
                     else:
                         raise e
 
-    # TODO: implement suitable path derivative.
-    # @parameterized.named_parameters(solver_controllers(SOLVERS))
-    # def test_cubature_ode(self, solver, controller):
-    #     cow = LyonsVictoir04_512(WienerSpace(self.target_dimension))
-    #     solver = RecombinationSolver(solver, MonteCarloRecombinator(self.key))
-    #     self.solver_analysis(solver, controller, cubature=cow, as_ode=True)
-
-    def _blackjax_inference_loop(self, key, kernel, initial_state, num_samples):
-        def one_step(state, key):
-            state, _ = kernel(key, state)
-
-        keys = jax.random.split(key, num_samples)
-        _, states = jax.lax.scan(one_step, initial_state, keys)
-        return states
-
 
 class CoreTests(InferenceTests):
-    def core_analysis(self, solver, logdensity, transition_kernel, initial_particles):
-        aot, aot_cost = self.compilation_analysis(
-            solver,
-            logdensity=logdensity,
-            transition_kernel=transition_kernel,
-            initial_particles=initial_particles,
-        )
-        sol, sol_cost = self.runtime_analysis(
-            aot,
-            logdensity=logdensity,
-            transition_kernel=transition_kernel,
-            initial_particles=initial_particles,
-        )
+    def core_analysis(self, solver, *args, **kwargs):
+        aot, aot_cost = self.compilation_analysis(solver, *args, **kwargs)
+        sol, sol_cost = self.runtime_analysis(aot, *args, **kwargs)
         self.results.append((self._testMethodName, aot_cost, sol_cost))
 
     def test_core(self):
-        def target_logdensity(t, p, args):
-            return multivariate_normal.logpdf(p, self.target_mean, self.target_cov)
-
-        # Setup the MCCubature.
-        recombinator_key = jax.random.PRNGKey(42)
-        cfv = LyonsVictoir04_512(WienerSpace(self.target_dimension))
-        cs = MCCubatureKernel(
-            propagator=LangevinDiffusionPropagator(cfv.stacked_points),
-            recombinator=MonteCarloRecombinator(recombinator_key),
-        )
+        key, _ = jax.random.split(self.key)
+        cubature_formula = LyonsVictoir04_512(WienerSpace(self.target_dimension))
+        ode_vf, _ = self.ula_vfs(cubature_formula)
+        y0 = self.y0_cubature_transform(self.y0, cubature_formula)
+        approximate_cubature_kernel = [
+            OverdampedLangevinKernel(ode_vf, cubature_formula.evaluate),
+            MonteCarloKernel(y0.shape, self.key),
+        ]
         self.core_analysis(
-            mccubaturesolve,
-            logdensity=target_logdensity,
-            transition_kernel=cs,
-            initial_particles=self.y0,
+            jtu.Partial(
+                mccubaturesolve,
+                approximate_cubature_kernel,
+                epochs=self.epochs,
+                t0=self.t0,
+                dt=self.dt0,
+            ),
+            y0,
         )
 
 

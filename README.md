@@ -15,16 +15,10 @@ Bayesian inference.
 
 The core features of MCCube are:
 - Approximate Bayesian inference of JAX transformable functions (support for PyTorch, Tensorflow and Numpy functions is provided via [Ivy](https://unify.ai/docs/ivy/compiler/transpiler.html));
-- A simple Markov chain cubature inference loop;
-- A Component framework for constructing Cubature steps as a composition of a Propagator and Recombinator;
-- Trace-time component validation that ensures components obey certain expected mathematical properties, with minimal runtime overhead;
+- A simple Markov chain cubature inference loop, [mccubaturesolve](https://mccube.readthedocs.io/api/_inference);
+- A framework for constructing/defining cubature kernels and cubature formulae;
 - Visualization tools for evaluating and debugging inference/solving performance;
-- A [Blackjax](https://blackjax.readthedocs.io/en/latest/)-like interface provided by `mccube.extensions` (**🚧 Coming Soon 🚧**);
-- A custom solver for using MCC in [Diffrax](https://docs.kidger.site/diffrax/), also provided by `mccube.extensions` (**🚧 Coming Soon 🚧**). 
-
-In addition, like the samplers in [Blackjax](https://blackjax.readthedocs.io/en/latest/), 
-MCCube can easily be integrated with probabilistic programming languages (PPLs), as long 
-as they can provide a (potentially unnormalized) log-density function.
+- A custom solver for using MCC in [Diffrax](https://docs.kidger.site/diffrax/)
 
 > [!warning]\
 > This package is currently a work-in-progress/experimental. Expect bugs, API instability, and treat all results with a healthy degree of skepticism.
@@ -45,7 +39,7 @@ If you want all the extras provided in `mccube.extensions`:
 pip install mccube[extras]
 ```
 
-Requires Python 3.9+, JAX 0.4.11+, and Equinox 0.10.5+.
+Requires Python 3.9+, JAX 0.4.23+, and Equinox 0.11.1+.
 
 By default, a CPU only version of JAX will be installed. To make use of other JAX/XLA 
 compatible accelerators (GPUs/TPUs) please follow [these installation instructions](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier).
@@ -53,12 +47,21 @@ Windows support for JAX is currently experimental; WSL2 is the recommended appro
 using JAX on Windows.
 
 ## Documentation
-**🚧 Under construction** at [https://mccube.readthedocs.io/](https://mccube.readthedocs.io/) 🚧.
+Available at [https://mccube.readthedocs.io/](https://mccube.readthedocs.io/).
 
 ## What is Markov chain cubature?
-MCC is an approach to constructing a [Cubature on Wiener Space](https://www.jstor.org/stable/4143098) which does not suffer from exponential scaling in time (particle count explosion), thanks to the utilization of (partitioned) recombination in the Cubature step/transition kernel.
+MCC is an approach to constructing a [Cubature on Wiener Space](https://www.jstor.org/stable/4143098) which does not suffer from exponential scaling in time (particle count explosion), thanks to the utilization of (partitioned) recombination in the cubature kernel (Markov transition kernel).
 
 ## Quick Example
+# TODO: 
+# 1. IMPROVE THIS EXAMPLE AND ADD MORE TO THE DOCS.
+# 2. GET ALL TESTS AND PRE-COMMIT TO PASS.
+# 3. FIX TESTS BENCHMARKING OUTPUT.
+# 4. ADD KERNEL TESTS.
+# 5. UPDATED METRICS.
+# 6. UPDATED VISUALIZERS.
+# 7. IMPROVE CI/CD
+
 The below toy example demonstrates MCCube for inferring the moments of a ten dimensional 
 Gaussian, with mean two and diagonal covariance six, given its logdensity function.
 More **in-depth examples are coming soon**. 
@@ -68,34 +71,31 @@ import jax
 import numpy as np
 from jax.scipy.stats import multivariate_normal
 
-from mccube import MCCubatureStep, mccubaturesolve, minimal_cubature_formula
-from mccube.components import LangevinDiffusionPropagator, MonteCarloRecombinator
+from mccube import OverdampedLangevinKernel, MonteCarloKernel, WienerSpace, LyonsVictoir04_512, mccubaturesolve
 from mccube.metrics import cubature_target_error
 
 # Setup the problem.
-n_particles = 8192
-target_dimension = 2
+n_particles = 1024
+target_dimension = 10
 rng = np.random.default_rng(42)
 prior_particles = rng.uniform(size=(n_particles, target_dimension))
 target_mean = 2 * np.ones(target_dimension)
-target_cov = 3 * np.diag(target_mean)
+target_cov = 6 * np.eye(target_mean)
 # MCCube expects the log-density to have call signature (t, p(t), args), allowing the
 # density to be time dependant, or to rely on some other generic args.
-# Note: You can obtain significantly better performance by defining a custom jvp here.
 def target_logdensity(t, p, args):
     return multivariate_normal.logpdf(p, target_mean, target_cov)
 
 # Setup the MCCubature.
 recombinator_key = jax.random.PRNGKey(42)
-cfv = minimal_cubature_formula(target_dimension, degree=3).vectors
-cs = MCCubatureStep(
-    propagator=LangevinDiffusionPropagator(cfv),
-    recombinator=MonteCarloRecombinator(recombinator_key),
-)
+cfv = LyonsVictoir04_512(WienerSpace(target_dimension))
+approximate_cubature_kernel = [
+    OverdampedLangevinKernel(target_logdensity, cfv.evaluate),
+    MonteCarloKernel(n_particles, recombinator_key)
+]
 # Construct the MCCubature/solve for the MCCubature paths.
 mccubature_paths = mccubaturesolve(
-    logdensity=target_logdensity,
-    transition_kernel=cs,
+    transition_kernel=approximate_cubature_kernel
     initial_particles=prior_particles,
 )
 # Compare mean and covariance of the inferred cubature to the target.
@@ -112,7 +112,7 @@ can be used, for example:
 from mccube.extensions.visualizers import TensorboardVisualizer
 
 with TensorboardVisualizer() as tbv:
-    mccubature_paths = mccubaturesolve(..., visualization_callback=tbv)
+    mccubature_paths = mccubaturesolve(..., callbacks=[tbv])
 ```
 
 To make use of the Tensorboard visualization suite remember to run the following command
