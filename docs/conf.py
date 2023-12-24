@@ -13,7 +13,9 @@
 import pathlib
 import sys
 from datetime import date
+from sphinx.ext.napoleon.docstring import GoogleDocstring
 
+from jaxtyping import ArrayLike
 import mccube
 
 PROJECT_DIR = pathlib.Path(__file__).absolute().parent.parent
@@ -35,6 +37,7 @@ master_doc = "index"
 # ones.
 extensions = [
     "sphinx_design",
+    "sphinx_math_dollar",
     "sphinx.ext.autodoc",
     "sphinx.ext.autodoc.typehints",
     "sphinx.ext.autosummary",
@@ -48,18 +51,27 @@ extensions = [
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "numpy": ("https://numpy.org/doc/stable/", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy-1.8.1/", None),
-    "jax": ("https://jax.readthedocs.io/en/latest/", None),
-    "chex": ("https://chex.readthedocs.io/en/latest/", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy-1.8.1", None),
+    "jax": ("https://jax.readthedocs.io/en/latest", None),
+    "chex": ("https://chex.readthedocs.io/en/latest", None),
 }
-intersphinx_disabled_reftypes = ["*"]
+nitpicky = True
 
 # AutoDoc configuration
-add_module_names = False
+add_module_names = True
 autodoc_typehints = "description"
-autodoc_member_order = "bysource"
-
+autodoc_type_aliases = {
+    ArrayLike: "ArrayLike",
+    # mccube._custom_types.P: "P",
+    # mccube._custom_types.RP: "RP",
+    # mccube._custom_types.Args: "Args"
+}
+autodoc_default_options = {
+    "member-order": "bysource",
+    "show-inheritance": True,
+}
+autodoc_preserve_defaults = True
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
@@ -108,3 +120,29 @@ myst_enable_extensions = ["colon_fence", "dollarmath"]
 
 bibtex_bibfiles = ["_static/references.bib"]
 bibtex_default_style = "alpha"  # alpha, plain, unsrt, unsrtalpha
+
+# -- Napoleon extension patches ----------------------------------------------
+# Provides a patch for the napoleon extension to allow for improved class
+# attribute documentation formatting.
+
+
+def parse_attributes_section(self, section):
+    lines = []
+    for _name, _type, _desc in self._consume_fields():
+        if not _type:
+            _type = self._lookup_annotation(_name)
+        lines.append(".. attribute:: " + _name)
+        if self._opt:
+            if "no-index" in self._opt or "noindex" in self._opt:
+                lines.append(":no-index:")
+        # Inline type declaration
+        if _type:
+            lines.extend(self._indent([":type: %s" % _type], 3))
+        lines.append("")
+        fields = self._format_field("", "", _desc)
+        lines.extend(self._indent(fields, 3))
+        lines.append("")
+    return [":Attributes:"] + self._indent(lines, 3)
+
+
+GoogleDocstring._parse_attributes_section = parse_attributes_section

@@ -10,20 +10,20 @@ from equinox.internal import ω
 from jax.scipy.special import gamma
 from numpy.polynomial.polynomial import polyval
 
-from mccube.formulae import (
+from mccube._formulae import (
+    _generate_point_permutations,
     AbstractCubature,
+    builtin_cubature_registry,
     Hadamard,
     LyonsVictoir04_512,
+    search_cubature_registry,
     StroudSecrest63_31,
     StroudSecrest63_32,
     StroudSecrest63_52,
     StroudSecrest63_53,
-    _CubatureRegistryMeta,
-    _generate_point_permutations,
-    builtin_cubature_registry,
-    search_cubature_registry,
 )
-from mccube.regions import GaussianRegion, WienerSpace
+from mccube._regions import GaussianRegion, WienerSpace
+from mccube._utils import all_subclasses
 
 
 def _base_formulae_tests(f):
@@ -47,14 +47,14 @@ class CubatureFormulaeTests(chex.TestCase):
         expected, and that new cubature classes are added to the registry.
         """
         # Check default registry is correct
-        get_registry = _CubatureRegistryMeta.get_registered_formulae()
+        get_registry = all_subclasses(AbstractCubature)
         chex.assert_trees_all_equal(builtin_cubature_registry, get_registry)
 
         class TestCubature(AbstractCubature):
             pass
 
-        updated_registry = _CubatureRegistryMeta.get_registered_formulae()
-        builtin_cubature_registry.append(TestCubature)
+        updated_registry = all_subclasses(AbstractCubature)
+        builtin_cubature_registry.add(TestCubature)
         chex.assert_trees_all_equal(updated_registry, builtin_cubature_registry)
 
     # fmt: off
@@ -102,10 +102,10 @@ class CubatureFormulaeTests(chex.TestCase):
             ]
         )
         chex.assert_trees_all_equal(a_FS, a_FS_expected)
-        d = a.shape[0]
+        d = np.shape(a)[0]
         # Symmetry group, S_d.
         a_S = _generate_point_permutations(a, "S")
-        a_S_expected = a_FS[d:, :]
+        a_S_expected = np.atleast_2d(a_FS)[d:, :]
         chex.assert_trees_all_equal(a_S, a_S_expected)
         # Reflection group, G_d.
         b = np.array([3, 3, 3])
@@ -140,7 +140,7 @@ class GaussianFormulaeTests(chex.TestCase):
         ("SS63_53, d=[2,3,4]", StroudSecrest63_53, 5, [3, 4]),
     )
     def test_gaussian_cubature(self, formula, degree, test_region_dims):
-        """
+        r"""
         Checks:
             - Points and weights have the same PyTree structure.
             - Number of points and point_count match/are consistent.
@@ -230,7 +230,7 @@ class WienerFormulaeTests(chex.TestCase):
                     f.stacked_weights, f.gaussian_cubature.stacked_weights
                 )
                 expected_eval = np.concatenate(
-                    [f.stacked_points[:, None, :], f.stacked_weights[:, None, None]], -1
+                    [f.stacked_points, np.atleast_2d(f.stacked_weights).T], -1
                 )
                 t0 = 0.5
                 t1 = 3.0

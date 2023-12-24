@@ -1,7 +1,6 @@
-"""
-Defines the integration regions (measure spaces) against which :mod:`mccube.formulae` 
-can be defined.
-"""
+"""Defines the integration regions (measure spaces) against which :mod:`mccube.formulae` 
+can be defined."""
+
 from __future__ import annotations
 
 import abc
@@ -19,6 +18,7 @@ class AbstractRegion(eqx.Module):
     Attributes:
         dimension: dimension $d$ of the integration region $\Omega$.
     """
+
     dimension: int
 
     @abc.abstractproperty
@@ -36,13 +36,14 @@ class GaussianRegion(AbstractRegion):
     This is the measure against which the *"probabilist's"* Hermite polynomials are
     orthogonal.
 
-    **Note:** if the covariance is scaled by one half, then $\mu$ is measure for which the
-    *"physicist's"* Hermite polynomials are orthogonal. I.E.
+    **Note:** if the covariance is scaled by one half, then $\mu$ is the measure for
+    which the *"physicist's"* Hermite polynomials are orthogonal. I.E.
     $\mu(x_1, \dots, x_d) = \frac{1}{\sqrt{\pi}^d}\exp(-x_1^2 - \dots - x_d^2)$.
 
     Attributes:
         dimension: dimension $d$ of the Euclidean space $\mathbb{R}^d$.
     """
+
     dimension: int
 
     @property
@@ -65,6 +66,7 @@ class WienerSpace(AbstractRegion):
     Attributes:
         dimension: dimension $d$ of the Euclidean space in which the paths take values.
     """
+
     dimension: int
 
     @property

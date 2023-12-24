@@ -1,8 +1,8 @@
-``mccube.regions`` module
-=========================
+``mccube._regions`` module
+==========================
 
-.. automodule:: mccube.regions
-.. currentmodule:: mccube.regions
+.. automodule:: mccube._regions
+.. currentmodule:: mccube._regions
 
 .. rubric:: Implemented Regions
 The following regions are implemented:

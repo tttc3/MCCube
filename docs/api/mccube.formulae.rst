@@ -1,10 +1,10 @@
 :tocdepth: 3
 
-``mccube.formulae`` module
-==========================
+``mccube._formulae`` module
+===========================
 
-.. automodule:: mccube.formulae
-.. currentmodule:: mccube.formulae
+.. automodule:: mccube._formulae
+.. currentmodule:: mccube._formulae
 
 
 Abstract cubature
@@ -38,7 +38,7 @@ this package does not provide support for such transformations.
 .. autosummary::
     :nosignatures:
 
-    GaussianCubature
+    AbstractGaussianCubature
     Hadamard
     StroudSecrest63_31
     StroudSecrest63_32
