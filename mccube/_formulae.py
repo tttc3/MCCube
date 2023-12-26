@@ -19,6 +19,7 @@ import jax.numpy as jnp
 import jax.tree_util as jtu
 import numpy as np
 from diffrax import AbstractBrownianPath
+from equinox import AbstractVar
 from equinox.internal import ω
 from jaxtyping import ArrayLike, Shaped
 from scipy.linalg import hadamard
@@ -50,7 +51,7 @@ class AbstractCubature(eqx.Module):
         sparse: indicates if the cubature points have a sparsity structure.
     """
 
-    region: AbstractRegion
+    region: AbstractVar[AbstractRegion]
     degree: ClassVar[int]
     sparse: ClassVar[bool] = False
 
@@ -145,7 +146,7 @@ class Hadamard(AbstractGaussianCubature):
     degree: ClassVar[int] = 3
 
     @cached_property
-    def weights(self) -> float:
+    def weights(self) -> RealScalarLike:
         return self.region.volume / self.point_count
 
     @cached_property
@@ -155,7 +156,7 @@ class Hadamard(AbstractGaussianCubature):
         return np.vstack((new_matrix, -new_matrix))
 
     @cached_property
-    def point_count(self) -> int:
+    def point_count(self) -> IntScalarLike:
         r"""Cubature point count $n = 2^{\lceil{\log_2 d}\rceil + 1}$."""
         max_power = np.ceil(np.log2(self.region.dimension)) + 1
         return int(2**max_power)
@@ -169,7 +170,7 @@ class StroudSecrest63_31(AbstractGaussianCubature):
     sparse: ClassVar[bool] = True
 
     @cached_property
-    def weights(self) -> float:
+    def weights(self) -> RealScalarLike:
         return self.region.volume / self.point_count
 
     @cached_property
@@ -180,7 +181,7 @@ class StroudSecrest63_31(AbstractGaussianCubature):
         return points_fully_symmetric
 
     @cached_property
-    def point_count(self) -> int:
+    def point_count(self) -> IntScalarLike:
         """Cubature point count $n = 2d$."""
         return int(2 * self.region.dimension)
 
@@ -207,7 +208,7 @@ class StroudSecrest63_32(AbstractGaussianCubature):
         return points
 
     @cached_property
-    def point_count(self) -> int:
+    def point_count(self) -> IntScalarLike:
         """Cubature point count $n = 2^d$."""
         return int(2**self.region.dimension)
 
@@ -244,7 +245,7 @@ class StroudSecrest63_52(AbstractGaussianCubature):
         return (A_points, B_points, C_points)
 
     @cached_property
-    def point_count(self) -> int:
+    def point_count(self) -> IntScalarLike:
         """Cubature point count $n = 2d^2 + 1$."""
         return int(2 * self.region.dimension**2 + 1)
 
@@ -282,7 +283,7 @@ class StroudSecrest63_53(AbstractGaussianCubature):
         return (A_points, B_points)
 
     @cached_property
-    def point_count(self) -> int:
+    def point_count(self) -> IntScalarLike:
         """Cubature point count $n = 2^d + 2d$."""
         return 2 * self.region.dimension + 2**self.region.dimension
 

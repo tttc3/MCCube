@@ -76,5 +76,7 @@ combine-as-imports = true
 order-by-type = false
 
 [tool.pyright]
+# Once pyright is fully supported in the relevant dependencies, turn these back on.
 reportIncompatibleMethodOverride = false
+reportIncompatibleVariableOverride = false
 include = ["mccube"]
