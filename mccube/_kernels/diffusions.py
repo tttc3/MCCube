@@ -3,7 +3,7 @@ from collections.abc import Callable
 import jax.numpy as jnp
 import jax.tree_util as jtu
 
-from .._custom_types import XP, Args, CubaturePoints, P, RealScalarLike
+from .._custom_types import Args, CubaturePoints, P, RealScalarLike, XP
 from .base import AbstractKernel
 
 
@@ -20,7 +20,8 @@ class OverdampedLangevinKernel(AbstractKernel):
 
     Attributes:
         grad_logdensity_fn: the gradient of the logdensity function given particles $p(t_0)$.
-        cubature_matrix: matrix $M$ with $n$ rows of $d\text{-dimensional}$ cubature vectors.
+        cubature_paths: callable which returns a matrix $M$ with $n$ rows of
+            $d\text{-dimensional}$ cubature vectors.
     """
 
     grad_logdensity_fn: Callable[[RealScalarLike, P, Args], P]
@@ -45,5 +46,6 @@ class OverdampedLangevinKernel(AbstractKernel):
 
 OverdampedLangevinKernel.__init__.__doc__ = r"""Args:
     grad_logdensity_fn: the gradient of the logdensity function given particles $p(t_0)$.
-    cubature_matrix: matrix $M$ with $n$ rows of $d\text{-dimensional}$ cubature vectors.
+    cubature_paths: callable which returns a matrix $M$ with $n$ rows of 
+            $d\text{-dimensional}$ cubature vectors.
 """

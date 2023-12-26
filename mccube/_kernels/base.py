@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 import chex
 import equinox as eqx
+import jax.numpy as jnp
 import jax.tree_util as jtu
 from jaxtyping import PyTree
 
@@ -81,14 +82,15 @@ class AbstractKernel(eqx.Module):
 class AbstractRecombinationKernel(AbstractKernel):
     r"""Abstract base class for all Recombination Kernels.
 
-    An :class:`AbstractKernel` is a :class:`AbstractRecombinationKernel` if it has a
+    An :class:`AbstractKernel` is an :class:`AbstractRecombinationKernel` if it has a
     :attr:`recombined_shape` attribute, and its :meth:`transform` obeys the following
     validation property:
 
-        -
+        - The output particles have the shape prescribed by :attr:`recombined_shape`.
 
     Attributes:
-        recombined_shape: the particle shape :meth:`transform` should yield.
+        recombined_shape: the particle shape :meth:`transform` should yield. The size
+            implied by this shape must be less than the size of the input particles.
     """
 
     recombined_shape: PyTree[tuple[int, ...], "XP"]
@@ -103,6 +105,7 @@ class AbstractRecombinationKernel(AbstractKernel):
 
         Ensures that the transform obeys the following property:
 
+        - The output particles have the shape prescribed by :attr:`recombined_shape`.
 
         Args:
             transform: transform to validate, $f(t_0, t_1, p(t_0), \text{args})$.
@@ -122,6 +125,7 @@ class AbstractRecombinationKernel(AbstractKernel):
 
             def _check(_shape, _recombined):
                 chex.assert_shape(_recombined, _shape)
+                assert jnp.size(_recombined) <= jnp.size(particles)
                 return _recombined
 
             return jtu.tree_map(
@@ -135,5 +139,6 @@ class AbstractRecombinationKernel(AbstractKernel):
 
 
 AbstractRecombinationKernel.__init__.__doc__ = """Args:
-    recombined_count: the particle count that :method:`transform` should yield. 
+    recombined_shape: the particle shape :meth:`transform` should yield. The size 
+            implied by this shape must be less than the size of the input particles.
 """

@@ -12,10 +12,11 @@ from .base import AbstractRecombinationKernel
 
 
 class MonteCarloKernel(AbstractRecombinationKernel):
-    """Monte-Carlo particle sub-sampling/recombination.
+    """Monte Carlo particle sub-sampling/recombination.
 
     Attributes:
-        recombined_count: the particle count that :meth:`transform` should yield.
+        recombined_shape: the particle shape :meth:`transform` should yield. The size
+            implied by this shape must be less than the size of the input particles.
         key: the base PRNGKey required for Monte Carlo sampling.
         weighting_function: a function, which given a set of particles, generates a set
             of importance-sampling weights. Uniform importance weighting by default.
@@ -45,7 +46,8 @@ class MonteCarloKernel(AbstractRecombinationKernel):
 
 
 MonteCarloKernel.__init__.__doc__ = """Args:
-    recombined_count: the particle count that :meth:`transform` should yield.
+   recombined_shape: the particle shape :meth:`transform` should yield. The size 
+            implied by this shape must be less than the size of the input particles.
     key: the base PRNGKey required for Monte Carlo sampling.
     weighting_function: a function, which given a set of particles, generates a set
         of importance-sampling weights. Uniform importance weighting by default.
