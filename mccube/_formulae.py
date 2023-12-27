@@ -4,14 +4,11 @@ defined in :mod:`mccube.regions`.
 A very limited number of formulae have been implemented for the regions in 
 :mod:`mccube._regions`. Thus, any contributions of additional formulae are very much 
 welcomed."""
-
-from __future__ import annotations
-
 import abc
 import itertools
 from collections.abc import Callable, Collection
 from functools import cached_property
-from typing import ClassVar, Literal
+from typing import Literal
 
 import equinox as eqx
 import jax
@@ -19,7 +16,6 @@ import jax.numpy as jnp
 import jax.tree_util as jtu
 import numpy as np
 from diffrax import AbstractBrownianPath
-from equinox import AbstractVar
 from equinox.internal import ω
 from jaxtyping import ArrayLike, Shaped
 from scipy.linalg import hadamard
@@ -36,7 +32,7 @@ from ._regions import AbstractRegion, GaussianRegion, WienerSpace
 from ._utils import all_subclasses
 
 
-class AbstractCubature(eqx.Module):
+class AbstractCubature[_Region: AbstractRegion](eqx.Module, strict=True):
     r"""Abstract base class for cubature formulae.
 
     A concrete implementation of this class allows one to construct the :attr:`~AbstractCubature.points`
@@ -51,9 +47,9 @@ class AbstractCubature(eqx.Module):
         sparse: indicates if the cubature points have a sparsity structure.
     """
 
-    region: AbstractVar[AbstractRegion]
-    degree: ClassVar[int]
-    sparse: ClassVar[bool] = False
+    region: _Region
+    degree: int = eqx.field(init=False)
+    sparse: bool = eqx.field(init=False, default=False)
 
     @cached_property
     @abc.abstractmethod
@@ -124,7 +120,7 @@ def evaluate_cubature(
     return jnp.sum(eval_points), eval_points
 
 
-class AbstractGaussianCubature(AbstractCubature):
+class AbstractGaussianCubature(AbstractCubature[GaussianRegion]):
     """Abstract base class for cubature formula that are valid for the
     :class:`~mccube.regions.GaussianRegion`.
 
@@ -137,13 +133,11 @@ class AbstractGaussianCubature(AbstractCubature):
     rescaled to be compatible with the measure assumed here.
     """
 
-    region: GaussianRegion
-
 
 class Hadamard(AbstractGaussianCubature):
     """Degree 3 Gaussian cubature from :cite:p:`victoir2004`."""
 
-    degree: ClassVar[int] = 3
+    degree: int = 3
 
     @cached_property
     def weights(self) -> RealScalarLike:
@@ -166,8 +160,8 @@ class StroudSecrest63_31(AbstractGaussianCubature):
     r"""Degree 3 Gaussian cubature from :cite:p:`stroudSecrest1963`, listing :math:`E_n^{r^2}`
     3-1 (pg315) in :cite:p:`stroud1971`."""
 
-    degree: ClassVar[int] = 3
-    sparse: ClassVar[bool] = True
+    degree: int = 3
+    sparse: bool = True
 
     @cached_property
     def weights(self) -> RealScalarLike:
@@ -194,7 +188,7 @@ class StroudSecrest63_32(AbstractGaussianCubature):
     four. For all other dimensions, :class:`Hadamard` is strictly more efficient.
     """
 
-    degree: ClassVar[int] = 3
+    degree: int = 3
 
     @cached_property
     def weights(self) -> float:
@@ -217,8 +211,8 @@ class StroudSecrest63_52(AbstractGaussianCubature):
     r"""Degree 5 Gaussian cubature from :cite:p:`stroudSecrest1963`, listing :math:`E_n^{r^2}`
     5-2 (pg317) in :cite:p:`stroud1971`."""
 
-    degree: ClassVar[int] = 5
-    sparse: ClassVar[bool] = True
+    degree: int = 5
+    sparse: bool = True
 
     @cached_property
     def weights(self) -> CubatureWeightsTree:
@@ -254,7 +248,7 @@ class StroudSecrest63_53(AbstractGaussianCubature):
     r"""Degree 5 Gaussian cubature from :cite:p:`stroudSecrest1963`, listing :math:`E_n^{r^2}`
     5-3 (pg317) in :cite:p:`stroud1971`. Valid for regions with dimension d > 2."""
 
-    degree: ClassVar[int] = 5
+    degree: int = 5
 
     def __check_init__(self):
         d = self.region.dimension
@@ -338,9 +332,7 @@ def _generate_point_permutations(
     return unique_generated_points
 
 
-class AbstractWienerCubature(AbstractCubature, AbstractBrownianPath):
-    region: WienerSpace
-
+class AbstractWienerCubature(AbstractCubature[WienerSpace], AbstractBrownianPath):
     # Provides Diffrax path compatibility.
     @property
     def t0(self) -> RealScalarLike:
@@ -385,8 +377,6 @@ class LyonsVictoir04_512(AbstractWienerCubature):
     """
 
     gaussian_cubature: AbstractGaussianCubature
-    degree: int = 0
-    sparse: bool = False
 
     def __init__(
         self,
@@ -395,8 +385,8 @@ class LyonsVictoir04_512(AbstractWienerCubature):
     ):
         self.gaussian_cubature = gaussian_cubature(GaussianRegion(region.dimension))
         self.region = region
-        self.degree = self.gaussian_cubature.degree
-        self.sparse = self.gaussian_cubature.sparse
+        self.degree = gaussian_cubature.degree
+        self.sparse = gaussian_cubature.sparse
 
     @cached_property
     def weights(self) -> CubatureWeightsTree:
