@@ -1,144 +1,183 @@
-from __future__ import annotations
-
 import abc
-import functools
-from collections.abc import Callable
+import operator
+from typing import override
 
-import chex
 import equinox as eqx
-import jax.numpy as jnp
 import jax.tree_util as jtu
 from jaxtyping import PyTree
 
-from .._custom_types import Args, P, RealScalarLike, XP
+from .._custom_types import (
+    Args,
+    Particles,
+    RealScalarLike,
+    PartitionedParticles,
+    RecombinedParticles,
+)
 
 
-class AbstractKernel(eqx.Module):
+class AbstractKernel(eqx.Module, strict=True):
     r"""Abstract base class for all Kernels.
 
-    Composes a transform $f\colon(t_0, t_1, p(t_0), \text{args}) \to p(t_1)$, with a validation
-    rule $v \colon f \to h$, to yield $h \colon (t_0, t_1, p(t_0), \text{args}) \to p(t_1)$,
-    where $h := (v \circ f)(t_0, t_1, p(t_0), \text{args})$ is the validated transform.
+    Let a time-evolving PyTree of constant structure $P$, whose leaves are two-dimensional
+    arrays with constant trailing dimension $d$ and time-dependant leading dimension $k$,
+    be denoted $p(t)$ and referred to as particles.
 
-    The primary utility of this class is to ensure that the transforms defined in
-    concrete implementations obey expected properties (as defined by the abstract class'
-    implementation of the validate method).
+    Given $p(t_0)$, a (transition) kernel $f \colon (t_0, p(t_0), \text{args}) \mapsto p(t_1)$
+    defines the state of the particles at some (future) time $t_1 \ge t_0$, providing
+    $t_1 - t_0$ is sufficiently small. An alternative interpretation is to view $p(t)$
+    as the solution of some differential equation, and the kernel as a (non-linear)
+    vector-field control product.
     """
 
     @abc.abstractmethod
-    def transform(
-        self, t0: RealScalarLike, t1: RealScalarLike, particles: P, args: Args
-    ) -> P:
+    def __call__(
+        self,
+        t: RealScalarLike,
+        particles: Particles,
+        args: Args,
+        weighted: bool = False,
+    ) -> Particles:
         r"""Transform the particles.
 
-        Represents a function $f \colon (t_0, t_1, p(t_0), \text{args}) \to p(t_1)$.
-
         Args:
-            t0: current time; particle state observation time.
-            t1: transformation time; transformed particle state observation time.
+            t: current time; particle state observation time, $t$.
             particles: particles to transform, $p(t_0)$.
             args: additional static arguments passed to the transform.
 
         Returns:
-            Transformed particles, $p(t_1)$.
+            A PyTree of transformed particles $p(t)$ with the same PyTree structure and
+                dimension as the input particles, $p(t_0)$.
         """
         ...
 
-    def validate[T](self, transform: Callable[..., T]) -> Callable[..., T]:
-        r"""Validate the transform.
 
-        Ensures that the transform obeys certain properties. Note: the default
-        implementation does nothing, simply returning the non-validated transform.
+class AbstractPartitioningKernel(AbstractKernel):
+    """Indicates (but does not check) that the kernel performs partitioning.
 
-        Args:
-            transform: transform to validate, $f(t_0, t_1, p(t_0), \text{args})$.
+    Partitioning requires the kernel to reshape each leaf of the particles PyTree from
+    the shape [n, d] to the shape [m, n/m,  d], where $m$ is the number of partitions.
+    Implcitly, the partitions must be of equal size.
 
-        Returns:
-            Validated transform $(v \circ f)(t_0, t_1, p(t_0), \text{args})$.
-        """
-        return transform
+    Attributes:
+        partition_count: indicates the requested number of partitions, $m$.
+    """
 
+    partition_count: PyTree[int, "Particles"] | None
+
+    @override
     def __call__(
-        self, t0: RealScalarLike, t1: RealScalarLike, particles: PyTree, args: Args
-    ) -> PyTree:
-        r"""Evaluate the validated transform.
-
-        Args:
-            t0: current time; particle state observation time.
-            t1: future time; future particle state observation time.
-            particles: particles to transform, $p(t_0)$.
-            args: additional static arguments passed to the transform.
-
-        Returns:
-            A PyTree of transformed particles, $p(t_1)$, with structure $P$.
-
-        Raises:
-            AssertionError: if any of the transform properties are not valid/obeyed.
-        """
-        _validated_transform = self.validate(self.transform)
-        return _validated_transform(t0, t1, particles, args)
+        self,
+        t: RealScalarLike,
+        particles: Particles,
+        args: Args,
+        weighted: bool = False,
+    ) -> PartitionedParticles:
+        ...
 
 
 class AbstractRecombinationKernel(AbstractKernel):
-    r"""Abstract base class for all Recombination Kernels.
+    r"""Indicates (but does not check) that the kernel performs recombination.
 
-    An :class:`AbstractKernel` is an :class:`AbstractRecombinationKernel` if it has a
-    :attr:`recombined_shape` attribute, and its :meth:`transform` obeys the following
-    validation property:
-
-        - The output particles have the shape prescribed by :attr:`recombined_shape`.
+    Recombination requires the kernel to strictly reduce the size of the leading
+    dimension $n$ of each leaf in the particles PyTree. The reduced set of recombined
+    particles $p(t_1)$ are expected to, in some abstract sense, be as representative
+    as possible of the input particles $p(t_0)$.
 
     Attributes:
-        recombined_shape: the particle shape :meth:`transform` should yield. The size
-            implied by this shape must be less than the size of the input particles.
+        recombination_count: indicates the requested size of the recombined dimension.
     """
 
-    recombined_shape: PyTree[tuple[int, ...], "XP"]
+    recombination_count: PyTree[int, "Particles"] | None
 
-    def transform(
-        self, t0: RealScalarLike, t1: RealScalarLike, particles: XP, args: Args
-    ) -> P:
+    @override
+    def __call__(
+        self,
+        t: RealScalarLike,
+        particles: Particles,
+        args: Args,
+        weighted: bool = False,
+    ) -> RecombinedParticles:
         ...
 
-    def validate[T](self, transform: Callable[..., T]) -> Callable[..., T]:
-        r"""Validate the transform.
 
-        Ensures that the transform obeys the following property:
+class PartitioningRecombinationKernel(AbstractRecombinationKernel):
+    """Composes a partitioning kernel with a recombination kernel.
 
-        - The output particles have the shape prescribed by :attr:`recombined_shape`.
+    The recombination kernel is applied independantly to each partition generated by
+    the partitioning kernel.
 
-        Args:
-            transform: transform to validate, $f(t_0, t_1, p(t_0), \text{args})$.
+    Example:
+        ```python
+        import jax.numpy as jnp
+        import jax.random as jr
 
-        Returns:
-            Validated transform $(v \circ f)(t_0, t_1, p(t_0), \text{args})$.
-        """
+        key = jr.PRNGKey(42)
 
-        @functools.wraps(self.transform)
-        def valid_transform(
-            t0: RealScalarLike,
-            t1: RealScalarLike,
-            particles: XP,
-            args: Args,
-        ) -> T:
-            recombined_particles = self.transform(t0, t1, particles, args)
+        y0 = jnp.ones((64,8))
+        n, d = y0.shape
+        n_out = n // 2
+        n_partitions = 4
+        partitioning_kernel = mccube.BinaryTreePartitioningKernel(n_partitions)
+        # The recombination_count is modified to account for the partitioning.
+        recombination_kernel = mccube.MonteCarloKernel(n_out // n_partitions, key=key)
+        kernel = mccube.PartitioningRecombinationKernel(
+            partitioning_kernel,
+            recombination_kernel
+        )
+        result = kernel(..., y0, ...)
+        # jnp.ones((32, 8))
+        ```
 
-            def _check(_shape, _recombined):
-                chex.assert_shape(_recombined, _shape)
-                assert jnp.size(_recombined) <= jnp.size(particles)
-                return _recombined
+    Attributes:
+        partitioning_kernel: a kernel to perform particle partitioning.
+        recombination_kernel: a kernel to perform particle recombination.
+    """
 
-            return jtu.tree_map(
-                _check,
-                self.recombined_shape,
-                recombined_particles,
-                is_leaf=lambda x: isinstance(x, tuple),
-            )
+    partitioning_kernel: AbstractPartitioningKernel
+    recombination_kernel: AbstractRecombinationKernel
 
-        return valid_transform
+    def __init__(
+        self,
+        partitioning_kernel: AbstractPartitioningKernel,
+        recombination_kernel: AbstractRecombinationKernel,
+    ):
+        self.partitioning_kernel = partitioning_kernel
+        self.recombination_kernel = recombination_kernel
+        self.recombination_count = jtu.tree_map(
+            operator.mul,
+            self.recombination_kernel.recombination_count,
+            self.partitioning_kernel.partition_count,
+        )
+
+    def __call__(
+        self,
+        t: RealScalarLike,
+        particles: Particles,
+        args: Args,
+        weighted: bool = False,
+    ) -> RecombinedParticles:
+        _vmap_recombination_kernel = eqx.filter_vmap(
+            self.recombination_kernel, in_axes=(None, 0, None, None)
+        )
+        _vmap_tree_compatible_recombination_kernels = jtu.tree_map(
+            lambda c: eqx.tree_at(
+                lambda k: k._fun.recombination_count, _vmap_recombination_kernel, c
+            ),
+            self.recombination_kernel.recombination_count,
+        )
+
+        partitioned = self.partitioning_kernel(t, particles, args, weighted)
+        recombined = jtu.tree_map(
+            lambda p, k: k(t, p, args, weighted),
+            partitioned,
+            _vmap_tree_compatible_recombination_kernels,
+        )
+        return jtu.tree_map(
+            lambda r, p: r.reshape(-1, p.shape[-1]), recombined, particles
+        )
 
 
-AbstractRecombinationKernel.__init__.__doc__ = """Args:
-    recombined_shape: the particle shape :meth:`transform` should yield. The size 
-            implied by this shape must be less than the size of the input particles.
+PartitioningRecombinationKernel.__init__.__doc__ = """Args:
+    partitioning_kernel: a kernel to perform particle partitioning.
+    recombination_kernel: a kernel to perform particle recombination.
 """
