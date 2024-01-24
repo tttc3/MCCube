@@ -28,7 +28,7 @@ from ._regions import AbstractRegion, GaussianRegion
 from ._utils import all_subclasses
 
 
-class AbstractCubature[_Region: AbstractRegion](eqx.Module, strict=True):
+class AbstractCubature[_Region: AbstractRegion](eqx.Module):
     r"""Abstract base class for cubature formulae.
 
     A concrete implementation of this class allows one to construct the [`points`][mccube.AbstractCubature.points]
