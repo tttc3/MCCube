@@ -1,72 +1,27 @@
-# Based on https://github.com/patrick-kidger/action_update_python_project/blob/d7ed86de913dd5bbe1c46a9b46d7bd05bc43b122/action.yml
-name: AutoRelease
+name: Release
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
 
 jobs:
-  pypi-publish:
-    name: upload release to PyPI
+  build:
     runs-on: ubuntu-latest
-    # Specifying a GitHub environment is optional, but strongly encouraged
-    environment: release
-    permissions:
-      # IMPORTANT: this permission is mandatory for trusted publishing
-      id-token: write
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v4
+      - name: Release
+        uses: patrick-kidger/action_update_python_project@v2
         with:
             python-version: "3.12"
-      - name: Install build tools
-        shell: bash
-        run: |
-            python -m pip install --upgrade pip
-            python -m pip install build
-            python -m build
-      - name: Check version in pyproject.toml
-        id: check_version
-        shell: bash
-        run: |
-            python -c "
-            import subprocess
-            import tomllib
-
-            vparse = lambda x: tuple(map(int, x.split('.')))
-
-            with open('pyproject.toml', 'rb') as fd:
-                pyproject = tomllib.load(fd)['project']
-
-            project_name = pyproject['name']
-            project_version = pyproject['version']
-            pypi_version = subprocess.run(
-                f'python -m pip index versions {project_name}', shell=True, capture_output=True
-            ).stdout
-            try:
-                pypi_version = pypi_version.split(b'\n', 1)[0].split(b' ')[1][1:-1].decode('utf-8')
-            except IndexError:
-                # If there exists no current pypi version
-                pypi_version = '0.0.0'
-            new_version = str(vparse(project_version) > vparse(pypi_version)).lower()
-
-            subprocess.run(f'echo name={project_name} >> $GITHUB_OUTPUT', shell=True)
-            subprocess.run(f'echo tag=v{project_version} >> $GITHUB_OUTPUT', shell=True)
-            subprocess.run(f'echo new-version={new_version} >> $GITHUB_OUTPUT', shell=True)
-            print(f'Got checkout_version={vparse(project_version)}')
-            print(f'Got pypi_version={vparse(pypi_version)}')
-            print(f'Setting name={project_name}')
-            print(f'Setting tag=v{project_version}')
-            print(f'Setting new-version={new_version}')
-            "
-
-
-      - name: Publish package distributions to PyPI
-        if: (steps.check_version.outputs.new-version == 'true')
-        uses: pypa/gh-action-pypi-publish@release/v1
-  
+            test-script: |
+                cp -r ${{ github.workspace }}/tests ./tests
+                cp ${{ github.workspace }}/pyproject.toml ./pyproject.toml
+                python -m pip install ".[test]"
+                pytest
+            pypi-token: ${{ secrets.pypi_token }}
+            github-user: tttc3
+            github-token: ${{ github.token }}
+            email-user: ${{ secrets.email_user }}
+            email-token: ${{ secrets.email_token }}
+            email-server: ${{ secrets.email_server }}
+            email-target: ${{ secrets.email_target }}
