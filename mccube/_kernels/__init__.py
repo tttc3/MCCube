@@ -5,9 +5,13 @@ Chain Cubature.
 
 from .base import (
     AbstractKernel as AbstractKernel,
+    AbstractPartitioningKernel as AbstractPartitioningKernel,
     AbstractRecombinationKernel as AbstractRecombinationKernel,
+    PartitioningRecombinationKernel as PartitioningRecombinationKernel,
 )
-
-from .diffusions import OverdampedLangevinKernel as OverdampedLangevinKernel
-
-from .random import MonteCarloKernel as MonteCarloKernel
+from .random import (
+    MonteCarloKernel as MonteCarloKernel,
+    MonteCarloPartitioningKernel as MonteCarloPartitioningKernel,
+)
+from .stratified import StratifiedPartitioningKernel as StratifiedPartitioningKernel
+from .tree import BinaryTreePartitioningKernel as BinaryTreePartitioningKernel
