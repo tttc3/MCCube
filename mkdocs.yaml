@@ -1,0 +1,125 @@
+site_name: "MCCube"
+site_description: MCCube - Markov Chain Cubature via JAX
+site_author: T Coxon
+site_url: https://mccube.readthedocs.io
+
+repo_url: https://github.com/tttc3/MCCube
+repo_name: tttc3/MCCube
+copyright: Copyright &copy; 2024 The MCCube authors.
+edit_uri: ""
+
+strict: true
+
+theme:
+    name: material
+    features:
+        - content.code.copy
+        - navigation.expand
+        - navigation.indexes
+        - navigation.footer
+        - navigation.sections
+        - navigation.top
+        - header.autohide
+        - toc.follow
+    palette:
+        - scheme: mccube
+          primary: custom
+          toggle:
+             icon: material/weather-night
+             name: Switch to light mode
+        - scheme: slate
+          primary: black
+          toggle:
+             icon: material/weather-sunny
+             name: Switch to dark mode
+    icon:
+        repo: fontawesome/brands/github
+    logo: "_static/logo.svg"
+    favicon: "_static/logo.svg"
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/tttc3/mccube
+    - icon: fontawesome/solid/person-running
+      link: https://datasig.ac.uk
+
+extra_javascript: 
+  - _static/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra_css:
+  - _static/custom.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.superfences
+  - toc:
+      permalink: "¤"
+      toc_depth: 4
+
+plugins:
+  - search
+  - mkdocstrings:
+      enable_inventory: true
+      handlers:
+        python:
+          import:
+            - https://docs.python.org/3/objects.inv
+            - https://jax.readthedocs.io/en/latest/objects.inv
+            - https://scikit-learn.org/stable/objects.inv
+            - https://docs.kidger.site/diffrax/objects.inv
+            - https://docs.kidger.site/equinox/objects.inv
+            - https://docs.kidger.site/jaxtyping/objects.inv
+          paths: [mccube]
+          options:
+            # Headings
+            show_root_toc_entry: false
+            show_root_heading: false
+            show_root_full_path: true
+            show_root_members_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            # Members
+            members_order: source
+            inherited_members: false
+            # Docstrings
+            docstring_section_style: list
+            merge_init_into_class: true
+            # Signatures
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+            summary: true
+
+nav:
+    - "index.md"
+    - Quickstart: "quickstart.md"
+    - API Reference:
+      - api/index.md
+      - Markov chain cubature framework:
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._term: "api/_term.md"
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._path: "api/_path.md"
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._solvers: "api/_solvers.md"
+      - Kernel library:
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._kernels.base: "api/_kernels/base.md"
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._kernels.random: "api/_kernels/random.md"
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._kernels.stratified: "api/_kernels/stratified.md"
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._kernels.tree: "api/_kernels/tree.md"
+      - Cubature library:
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._formulae: "api/_formulae.md"
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._regions: "api/_regions.md"
+      - Miscellaneous:
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._custom_types: "api/_custom_types.md"
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._utils: "api/_utils.md"
+        - <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> mccube._metrics: "api/_metrics.md"
+    - Contributing: "CONTRIBUTING.md"
+  

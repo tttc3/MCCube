@@ -1,27 +1,100 @@
-#site-navigation{
-	h1.site-logo {
-		font-weight: bold;
-	}
+/* Custom colors */
+:root {
+  --ds-blue: #33BCAD;
+  --ds-mid-blue: #28968A;
+  --ds-dark-blue: #0A1446;
+  --ds-green: #DDEF00;
+  --ds-grey: #E6E6DC;
+  --ds-dark-grey: #D8D8C9;
+  --ds-white: #FFFFFF;
 }
 
-/* Fixes overflow from align math environments */
-.math-wrapper {
-    overflow-x: visible;
+[data-md-color-scheme="mccube"] {
+  color-scheme: light;
+
+  /* Primary */
+  --md-primary-fg-color: var(--ds-dark-blue);
+  --md-primary-fg-color--dark: var(--ds-dark-grey);
+
+  /* Accent */
+  --md-accent-fg-color: var(--ds-blue);
+  --md-accent-bg-color: var(--ds-green);
+
+  /* Default */
+  --md-default-bg-color: var(--ds-grey);
+ 
+  /* Code */
+  --md-code-bg-color: var(--ds-dark-grey);
+
+  /* Typeset */
+  --md-typeset-a-color: var(--ds-mid-blue);
+  
+  /* Admonition */
+  --md-admonition-bg-color: var(--ds-grey);
+  
+  /* Footer */
+  --md-footer-fg-color: var(--ds-dark-blue);
+  --md-footer-fg-color--light: var(--ds-blue);
+  --md-footer-fg-color--ligher: var(--ds-blue);
+  --md-footer-bg-color: var(--ds-dark-grey);
+  --md-footer-bg-color--dark: var(--ds-dark-blue);
 }
 
-/* Add a line break between the arguments of each function.
-   Taken from: https://github.com/sphinx-doc/sphinx/issues/1514#issuecomment-742703082
-*/
-/* .sig-param::before {
-    content: "\a\20\20\20\20\20\20";
-    white-space: pre;
+
+/* Typeset */
+.md-typeset a {
+  text-decoration: underline;
 }
 
-dt em.sig-param:last-of-type::after {
-    content: "\a";
-    white-space: pre;
+/* Navigation. */
+.md-nav__source {
+  border-top: 0.1rem solid var(--md-accent-bg-color);
+  color: var(--md-primary-fg-color);
 }
 
-dl.class > dt:first-of-type {
-    display: block !important;
-} */
+.md-sidebar--secondary .md-sidebar__inner {
+  border-left: 0.1rem solid var(--md-typeset-a-color);
+}
+
+/* Header. */
+.md-header {
+  border-bottom: 0.15rem solid var(--md-accent-bg-color);
+}
+
+.md-header__button.md-logo img, .md-header__button.md-logo svg {
+    height: 2.0rem;
+    width: 2.0rem;
+}
+
+/* Footer. */
+html .md-footer-meta.md-typeset a:hover {
+  color: var(--md-typeset-a-color);
+}
+
+/* Indentation. */
+div.doc-contents:not(.first) {
+  padding-left: 25px;
+  border-left: .15rem solid var(--md-typeset-table-color);
+}
+
+/* Mark external links as such. */
+a.external::after,
+a.autorefs-external::after {
+  /* https://primer.style/octicons/arrow-up-right-24 */
+  mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18.25 15.5a.75.75 0 00.75-.75v-9a.75.75 0 00-.75-.75h-9a.75.75 0 000 1.5h7.19L6.22 16.72a.75.75 0 101.06 1.06L17.5 7.56v7.19c0 .414.336.75.75.75z"></path></svg>');
+  -webkit-mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18.25 15.5a.75.75 0 00.75-.75v-9a.75.75 0 00-.75-.75h-9a.75.75 0 000 1.5h7.19L6.22 16.72a.75.75 0 101.06 1.06L17.5 7.56v7.19c0 .414.336.75.75.75z"></path></svg>');
+  content: ' ';
+
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+
+  height: 1em;
+  width: 1em;
+  background-color: var(--md-typeset-a-color);
+}
+
+a.external:hover::after,
+a.autorefs-external:hover::after {
+  background-color: var(--md-accent-fg-color);
+}

@@ -1,6 +1,6 @@
 [project]
 name = "mccube"
-version = "0.0.1"
+version = "0.0.2"
 authors = [{name = "The MCCube team", email = "T.Coxon2@lboro.ac.uk"}]
 description = "Markov chain cubature via JAX."
 keywords = [
@@ -22,14 +22,14 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 dependencies = [
-    "chex>=0.1.85",
     "diffrax>=0.4.1",
     "equinox>=0.11.1",
     "jax>=0.4.23",
     "jaxlib>=0.4.23",
     "jaxtyping>=0.2.25",
+    "scikit-learn>=1.3.2"
 ]
 
 [project.urls]
@@ -38,17 +38,13 @@ documentation = "https://mccube.readthedocs.io"
 repository = "https://github.com/tttc3/mccube"
 
 [project.optional-dependencies]
-extras = [
-    "tensorboardX>=2.6.2",
-]
-
 test = [
-    "absl-py",
     "pytest",
+    "beartype"
 ]
 
 dev = [
-    "mccube[extras, test]",
+    "mccube[test]",
     "jupytext",
     "pre-commit"
 ]
@@ -64,7 +60,7 @@ include = ["mccube/*"]
 addopts = "--jaxtyping-packages=mccube,beartype.beartype(conf=beartype.BeartypeConf(strategy=beartype.BeartypeStrategy.On))"
 
 [tool.jupytext]
-formats = "ipynb,md"
+formats = "ipynb, md"
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
@@ -76,7 +72,5 @@ combine-as-imports = true
 order-by-type = false
 
 [tool.pyright]
-# Once pyright is fully supported in the relevant dependencies, turn these back on.
-reportIncompatibleMethodOverride = false
-reportIncompatibleVariableOverride = false
-include = ["mccube"]
+typeCheckingMode = "standard"
+include = ["mccube", "test"]
