@@ -12,10 +12,11 @@ from diffrax import (
     VirtualBrownianTree,
     WeaklyDiagonalControlTerm,
 )
-from helpers import gaussian_formulae
 from jax.scipy.stats import multivariate_normal
 
 import mccube
+
+from .helpers import gaussian_formulae
 
 key = jr.PRNGKey(42)
 init_key, rng_key = jr.split(key)

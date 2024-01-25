@@ -1,9 +1,10 @@
 import equinox as eqx
-import mccube
-import pytest
 import jax.numpy as jnp
+import pytest
 
-from helpers import gaussian_formulae
+import mccube
+
+from .helpers import gaussian_formulae
 
 
 @pytest.mark.parametrize("formula", gaussian_formulae)
