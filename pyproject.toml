@@ -1,6 +1,6 @@
 [project]
 name = "mccube"
-version = "0.0.2"
+version = "0.0.3"
 authors = [{name = "The MCCube team", email = "T.Coxon2@lboro.ac.uk"}]
 description = "Markov chain cubature via JAX."
 keywords = [
@@ -72,4 +72,4 @@ order-by-type = false
 
 [tool.pyright]
 typeCheckingMode = "standard"
-include = ["mccube", "test"]
+include = ["mccube", "tests"]
