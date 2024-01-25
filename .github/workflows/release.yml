@@ -7,27 +7,7 @@ on:
       - main
 
 jobs:
-  version-update-check:
-    uses: tttc3/actions/version-update-check.yml@main
-
-  runtime-and-build-tests:
-    needs: version-update-check
-    if: ${{ version-update-check.outpus.new-version == 'true' }}
-    strategy:
-      matrix:
-        python-version: [ 3.12 ]
-        os: [ ubunutu-latest, windows-latest]
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Runtime tests
-        uses: tttc3/actions/test.yml@main
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Build tests
-        uses: tttc3/actions/build.yml@main
-   
   release:
-    needs: runtime-and-build-tests
-    uses: tttc3/actions/release.yml@main
+    uses: tttc3/actions@main
+    with:
+      release: true
