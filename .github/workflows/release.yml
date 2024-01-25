@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Release
-        uses: patrick-kidger/action_update_python_project@v2
+        uses: tttc3/action_update_python_project
         with:
             python-version: "3.12"
             test-script: |
@@ -25,3 +25,4 @@ jobs:
             email-token: ${{ secrets.email_token }}
             email-server: ${{ secrets.email_server }}
             email-target: ${{ secrets.email_target }}
+            email-starttls: true
