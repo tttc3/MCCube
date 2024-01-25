@@ -41,8 +41,8 @@ repository = "https://github.com/tttc3/mccube"
 [project.optional-dependencies]
 test = [
     "beartype",
-    "jaxlib",
-    "pytest"
+    "pytest",
+    "jaxlib"
 ]
 
 dev = [
