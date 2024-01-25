@@ -1,28 +1,33 @@
-name: Release
+name: "Release python package"
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  version-update-check:
+    uses: tttc3/actions/version-update-check.yml@main
+
+  runtime-and-build-tests:
+    needs: version-update-check
+    if: ${{ version-update-check.outpus.new-version == 'true' }}
+    strategy:
+      matrix:
+        python-version: [ 3.12 ]
+        os: [ ubunutu-latest, windows-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Release
-        uses: tttc3/action_update_python_project
+      - name: Runtime tests
+        uses: tttc3/actions/test.yml@main
         with:
-            python-version: "3.12"
-            test-script: |
-                cp -r ${{ github.workspace }}/tests ./tests
-                cp ${{ github.workspace }}/pyproject.toml ./pyproject.toml
-                python -m pip install ".[test]"
-                pytest
-            pypi-token: ${{ secrets.pypi_token }}
-            github-user: tttc3
-            github-token: ${{ github.token }}
-            email-user: ${{ secrets.email_user }}
-            email-token: ${{ secrets.email_token }}
-            email-server: ${{ secrets.email_server }}
-            email-target: ${{ secrets.email_target }}
-            email-starttls: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build tests
+        uses: tttc3/actions/build.yml@main
+   
+  release:
+    needs: runtime-and-build-tests
+    uses: tttc3/actions/release.yml@main

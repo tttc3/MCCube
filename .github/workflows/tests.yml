@@ -9,23 +9,11 @@ jobs:
     strategy:
       matrix:
         python-version: [ 3.12 ]
-        os: [ ubuntu-latest ]
+        os: [ ubuntu-latest, windows-latest]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - name: Runtime tests
+        uses: tttc3/actions/test.yml@main
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Checks with pre-commit
-        uses: pre-commit/action@v2.0.3
-
-      - name: Test with pytest
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install ".[test]"
-          python -m test
