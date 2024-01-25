@@ -1,4 +1,4 @@
-name: "Release python package"
+name: Release
 
 on:
   push:
@@ -6,7 +6,19 @@ on:
       - main
 
 jobs:
-  release:
-    uses: tttc3/actions@main
-    with:
-      release: true
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release
+        uses: tttc3/action_update_python_project@main
+        with:
+            enabled_features: "tag, deploy"
+            python-version: "3.12"
+            test-script: |
+                cp -r ${{ github.workspace }}/tests ./tests
+                cp ${{ github.workspace }}/pyproject.toml ./pyproject.toml
+                python -m pip install ".[test]"
+                pytest
+            pypi-token: ${{ secrets.pypi_token }}
+            github-user: tttc3
+            github-token: ${{ github.token }}
