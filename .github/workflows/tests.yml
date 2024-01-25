@@ -5,15 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-tests:
-    strategy:
-      matrix:
-        python-version: [ 3.12 ]
-        os: [ ubuntu-latest, windows-latest]
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Runtime tests
-        uses: tttc3/actions/test.yml@main
-        with:
-          python-version: ${{ matrix.python-version }}
+  test:
+    uses: tttc3/actions@main
+    with:
+      release: false
