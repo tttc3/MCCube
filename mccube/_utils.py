@@ -1,6 +1,7 @@
 """Helpful utilities used throughout MCCube."""
 import jax.numpy as jnp
 import jax.tree_util as jtu
+from jaxtyping import Array, PyTree, Shaped
 
 from ._custom_types import PackedParticles, Particles, UnpackedParticles, Weights
 
@@ -15,6 +16,26 @@ def nop(*args, **kwargs) -> None:
         ```
     """
     ...
+
+
+def center_of_mass(
+    particles: Particles, weights: Weights | None = None
+) -> PyTree[Shaped[Array, " d"], "Particles"]:
+    """Compute the weighted mean/center of mass of a [`Particles`][mccube._custom_types.Particles]
+    PyTree. If `weights==None` then all particles are equally weighted.
+
+    Example:
+        ```python
+        particles = {"y": jnp.array([1,2,3])}
+        weights = {"y": jnp.array([1,2,2])}
+        result = center_of_mass(particles, weights)
+        # {"y": Array(2.2, dtype=float32)}
+
+        result = center_of_mass(particles, None)
+        # {"y": Array(2.0, dtype=float32)}
+        ```
+    """
+    return jtu.tree_map(jnp.average, particles, 0, weights)
 
 
 def pack_particles(
@@ -101,7 +122,7 @@ def all_subclasses(cls: type) -> set[type]:
     return subclasses
 
 
-def requires_weighing(is_weighted: bool) -> None:
+def requires_weighted(is_weighted: bool) -> None:
     if not is_weighted:
         raise ValueError("Kernel requires `weighted=True`; got {`weighted=False`}.")
     return

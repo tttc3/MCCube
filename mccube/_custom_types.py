@@ -13,15 +13,18 @@ from typing import Any, TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
-from jaxtyping import Array, ArrayLike, Bool, Float, Int, PyTree, Shaped
+from jaxtyping import Array, ArrayLike, Bool, Complex, Float, Int, PyTree, Shaped
 
 # These are identical to the definitions in diffrax.
 if TYPE_CHECKING:
     BoolScalarLike = bool | Array | npt.NDArray[np.bool_]
+    ComplexScalarLike = complex | Array | npt.NDArray[np.complex_]
     FloatScalarLike = float | Array | npt.NDArray[np.float_]
     IntScalarLike = int | Array | npt.NDArray[np.int_]
 else:
     BoolScalarLike = Bool[ArrayLike, ""]
+    ComplexScalarLike = Complex[ArrayLike, ""]
+    """A value which can be considered as a complex scalar value."""
     FloatScalarLike = Float[ArrayLike, ""]
     IntScalarLike = Int[ArrayLike, ""]
     """A value which can be considered as an integer scalar value."""

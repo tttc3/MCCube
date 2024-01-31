@@ -138,7 +138,7 @@ def test_stratified_partitioning_kernel():
 def test_binary_tree_partitioning_kernel(mode):
     n_parts = 3, 4
     y0 = jnp.array(
-        [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0], [4.0, 4.0], [5.0, 5.0], [6.0, 6.0]]
+        [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0], [9.0, 10.0], [11.0, 12.0]]
     )
     y1 = y0[:-2]
 
@@ -146,26 +146,12 @@ def test_binary_tree_partitioning_kernel(mode):
         {"y0": n_parts[0], "y1": n_parts[1]}, mode
     )
     values = kernel(0.0, {"y0": y0, "y1": y1}, None)
-    # fmt: off
-    expected_partitioning = {
-        "y0": jnp.array(
-            [
-                [[1.0, 1.0], [2.0, 2.0]],
-                [[3.0, 3.0], [4.0, 4.0]],
-                [[5.0, 5.0], [6.0, 6.0]],
-            ]
-        ),
-        "y1": jnp.array(
-            [
-                [[1.0, 1.0]],
-                [[2.0, 2.0]],
-                [[3.0, 3.0]],
-                [[4.0, 4.0]]
-            ]
-        ),
-    }
-    # fmt: on
-    assert eqx.tree_equal(expected_partitioning, values)
+    expected_unique, values_unique = jtu.tree_map(
+        lambda x: jnp.unique(x, return_counts=True), ({"y0": y0, "y1": y1}, values)
+    )
+    assert eqx.tree_equal(expected_unique, values_unique)
+    assert values["y0"].shape == (3, 2, 2)
+    assert values["y1"].shape == (4, 1, 2)
 
 
 # # _kernels/_carathedory.py

@@ -1,6 +1,21 @@
-import mccube
 import equinox as eqx
 import jax.numpy as jnp
+
+import mccube
+
+
+def test_center_of_mass():
+    y0 = jnp.array([[1.0, 2.0], [3.0, -4.0], [5.0, 6.0]])
+    weights = None
+
+    com = mccube.center_of_mass(y0, weights)
+    expected_com = jnp.array([3, 4 / 3])
+    assert eqx.tree_equal(com, expected_com)
+
+    y0, weights = mccube.unpack_particles(y0, True)
+    com_weighted = mccube.center_of_mass(y0, weights)
+    expected_com = jnp.array([5.0])
+    assert eqx.tree_equal(com_weighted, expected_com)
 
 
 def test_pack_pacticles():

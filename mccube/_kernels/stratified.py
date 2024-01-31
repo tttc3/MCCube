@@ -5,8 +5,7 @@ import jax.tree_util as jtu
 from jaxtyping import ArrayLike, Shaped
 
 from .._custom_types import Args, Particles, PartitionedParticles, RealScalarLike
-from .._metrics import center_of_mass
-from .._utils import unpack_particles
+from .._utils import center_of_mass, unpack_particles
 from .base import AbstractPartitioningKernel
 
 

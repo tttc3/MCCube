@@ -26,8 +26,13 @@ from ._kernels import (
 
 # Metrics
 from ._metrics import (
-    center_of_mass as center_of_mass,
+    gaussian_maximum_mean_discrepancy as gaussian_maximum_mean_discrepancy,
+    gaussian_optimal_transport as gaussian_optimal_transport,
+    gaussian_sinkhorn_divergence as gaussian_sinkhorn_divergence,
+    gaussian_squared_bures_distance as gaussian_squared_bures_distance,
     gaussian_wasserstein_metric as gaussian_wasserstein_metric,
+    lp_metric as lp_metric,
+    lpp_metric as lpp_metric,
     pairwise_metric as pairwise_metric,
 )
 
@@ -46,6 +51,7 @@ from ._term import MCCTerm as MCCTerm
 # Utils
 from ._utils import (
     all_subclasses as all_subclasses,
+    center_of_mass as center_of_mass,
     pack_particles as pack_particles,
     unpack_particles as unpack_particles,
 )
