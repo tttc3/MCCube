@@ -23,7 +23,7 @@ To install the base pacakge:
 ```bash
 pip install mccube
 ```
-Requires Python 3.9+, Diffrax 0.5.0+, and Equinox 0.11.3+.
+Requires Python 3.10+, Diffrax 0.5.0+, and Equinox 0.11.3+.
 
 By default, a CPU only version of JAX will be installed. To make use of other JAX/XLA 
 compatible accelerators (GPUs/TPUs) please follow [these installation instructions](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier).
