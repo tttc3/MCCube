@@ -1,6 +1,6 @@
 import abc
 import operator
-from typing import override
+from typing_extensions import override
 
 import equinox as eqx
 import jax.tree_util as jtu
@@ -9,8 +9,8 @@ from jaxtyping import PyTree
 from .._custom_types import (
     Args,
     Particles,
-    RealScalarLike,
     PartitionedParticles,
+    RealScalarLike,
     RecombinedParticles,
 )
 
