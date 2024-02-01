@@ -5,7 +5,7 @@ import abc
 import itertools
 from collections.abc import Callable, Collection
 from functools import cached_property
-from typing import Literal
+from typing import Generic, Literal, TypeVar
 
 import equinox as eqx
 import jax
@@ -27,8 +27,10 @@ from ._custom_types import (
 from ._regions import AbstractRegion, GaussianRegion
 from ._utils import all_subclasses
 
+_Region = TypeVar("_Region", bound=AbstractRegion)
 
-class AbstractCubature[_Region: AbstractRegion](eqx.Module):
+
+class AbstractCubature(eqx.Module, Generic[_Region]):
     r"""Abstract base class for cubature formulae.
 
     A concrete implementation of this class allows one to construct the [`points`][mccube.AbstractCubature.points]
@@ -174,13 +176,13 @@ class AbstractGaussianCubature(AbstractCubature[GaussianRegion]):
 
         ```bibtex
         @book{stroud1971,
-        title     = {Approximate Calculation of Multiple Integrals},
-        author    = {Stroud, A. H.},
-        year      = {1971},
-        publisher = {Prentice-Hall},
-        pages     = {431},
-        isbn      = {9780130438935},
-        url       = {https://archive.org/details/approximatecalcu0000stro_b8j7}
+          title     = {Approximate Calculation of Multiple Integrals},
+          author    = {Stroud, A. H.},
+          year      = {1971},
+          publisher = {Prentice-Hall},
+          pages     = {431},
+          isbn      = {9780130438935},
+          url       = {https://archive.org/details/approximatecalcu0000stro_b8j7}
         }
         ```
     """
