@@ -26,7 +26,7 @@ jobs:
           python -m pip install -r ./tests/requirements-test.txt
           
       - name: Checks with pre-commit
-        uses: pre-commit/action@v3
+        uses: pre-commit/action@v3.0.0
 
       - name: Test with pytest
         run: |
