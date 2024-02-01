@@ -26,6 +26,7 @@ from ._kernels import (
 
 # Metrics
 from ._metrics import (
+    gaussian_kl_divergence as gaussian_kl_divergence,
     gaussian_maximum_mean_discrepancy as gaussian_maximum_mean_discrepancy,
     gaussian_optimal_transport as gaussian_optimal_transport,
     gaussian_sinkhorn_divergence as gaussian_sinkhorn_divergence,

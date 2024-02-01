@@ -10,12 +10,15 @@ import mccube
 
 
 @pytest.fixture
-def reference_problem(n=128, d=5):
-    k1, k2, k3 = jr.split(jr.PRNGKey(42), 3)
-    mean1, mean2 = jr.uniform(k1, (2, d), minval=-1.0)
-    g1, g2 = jnp.sqrt(0.2) * jr.normal(k2, (2, d, d))
-    cov1 = g1 @ g1.T
-    cov2 = g2 @ g2.T
+def reference_problem(n=1_000_000, d=2):
+    # Quantities are generated as per §5 of [`@janati2020`]
+    k1, k2, k3 = jr.split(jr.PRNGKey(0), 3)
+    mean1, mean2 = jr.uniform(k1, (2, d), minval=-1.0, maxval=1.0)
+    G1, G2 = jr.multivariate_normal(k2, jnp.zeros(d), 0.2 * jnp.identity(d), (2, d))
+    G1 = jnp.abs(G1)
+    G2 = jnp.abs(G2)
+    cov1 = G1 @ G1.T
+    cov2 = G2 @ G2.T
 
     return (mean1, mean2), (cov1, cov2)
 
@@ -90,3 +93,8 @@ def test_gaussian_sinkhorn_divergence(reference_problem):
     ref_sigma_inf = mccube.gaussian_maximum_mean_discrepancy(means[0], means[1], cost)
     result_sigma_inf = mccube.gaussian_sinkhorn_divergence(means, covs, jnp.inf, cost)
     assert eqx.tree_equal(ref_sigma_inf, result_sigma_inf, rtol=1e-5, atol=1e-8)
+
+
+@pytest.mark.skip("Suitable test not yet identified.")
+def test_gaussian_kl_divergence(reference_problem):
+    ...
