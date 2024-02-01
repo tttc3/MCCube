@@ -2,11 +2,11 @@
 from collections.abc import Callable
 from typing import TypeVar
 
-import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.tree_util as jtu
 from jax.scipy.linalg import sqrtm
+import lineax as lx
 from jaxtyping import Array, PyTree, Real, Shaped
 
 from ._custom_types import Particles, RealScalarLike
@@ -37,7 +37,9 @@ def lpp_metric(
 
 
 def pairwise_metric(
-    xs: PyTree[Array], ys: PyTree[Array], metric=lp_metric
+    xs: Particles,
+    ys: Particles,
+    metric: Callable[[Mean, Mean], RealScalarLike] = lp_metric,
 ) -> PyTree[Shaped[Array, "?n ?n"], "Particles"]:
     """Pairwise metric between two PyTrees of `n` vectors of dimension `d`.
 
@@ -56,7 +58,7 @@ def pairwise_metric(
 def gaussian_squared_bures_distance(
     cov1: PyTree[Cov, "T"],
     cov2: PyTree[Cov, "T"],
-    sigma: RealScalarLike = 0.0,
+    sigma: RealScalarLike,
 ) -> PyTree[RealScalarLike, "T"]:
     r"""Entropy-regularized squared Bures distance between two multi-variate Gaussian
     distributions, based on the closed form defined in equation 14 of [`@janati2020`].
@@ -73,10 +75,10 @@ def gaussian_squared_bures_distance(
 
     Special handling is provided for the following limits:
 
-    - $\lim_{\sigma \to 0}B_\sigma^2(\Sigma_1, \Sigma_2) = \Text{Tr}(\Sigma_1 + \Sigma_2
+    - $\lim_{\sigma \to 0}B_\sigma^2(\Sigma_1, \Sigma_2) = \text{Tr}(\Sigma_1 + \Sigma_2
     -D_\sigma)$;
-    - $\lim_{\sigma \to \infty}B_\sigma^2(\Sigma_1, \Sigma_2) = \Text{Tr}(\Sigma_1 +
-    \Sigma_2)
+    - $\lim_{\sigma \to \infty}B_\sigma^2(\Sigma_1, \Sigma_2) = \text{Tr}(\Sigma_1 +
+    \Sigma_2)$
 
     ??? cite "Reference: [`@janati2020`]"
 
@@ -128,11 +130,11 @@ def gaussian_optimal_transport(
     means: tuple[Mean, Mean],
     covs: tuple[Cov, Cov],
     sigma: RealScalarLike,
-    cost: Callable[[Mean, Mean], RealScalarLike] = lambda x, y: lpp_metric(x, y),
+    cost: Callable[[Mean, Mean], RealScalarLike] = lpp_metric,
 ) -> RealScalarLike:
     r"""Entropy-regularized optimal transport between two multi-variate Gaussian
     distributions, based on the closed form in eqautions 13 and 14 of [`@janati2020`].
-    $OT_\sigma(x_1, x_2) = c(\mu_1, \mu_2) + B_\sigma^2(\Sigma_1, \Sigma_2)$;
+    $OT_{\sigma,c}(x_1, x_2) = c(\mu_1, \mu_2) + B_\sigma^2(\Sigma_1, \Sigma_2)$;
 
     where:
 
@@ -144,7 +146,7 @@ def gaussian_optimal_transport(
     Special cases occur in the following limit:
 
     - If $\sigma \to 0$, and $c(\mu_1, \mu_2) = \|\mu_1 - \mu_2\|_p^p$, the optimal
-    transport is the p-Wasserstein metric raised to the power of $W_p^p(x_1, x_2)$.
+    transport is the p-Wasserstein metric raised to the power of $p$; $W_p^p(x_1, x_2)$.
 
     ??? cite "Reference: [`@janati2020`]"
 
@@ -174,7 +176,7 @@ def gaussian_wasserstein_metric(
     means: tuple[Mean, Mean], covs: tuple[Cov, Cov], p: RealScalarLike = 2
 ):
     r"""p-Wasserstein metric between two multi-variate Gaussian distributions. Alias
-    for the $p-\text{th}$ root of [`mccube.gaussian_optimal_transport`][] at the limit
+    for the $p\text{-th}$ root of [`mccube.gaussian_optimal_transport`][] at the limit
     $\sigma \to 0$, with "ground cost" $c(\mu_1, \mu_2) = \|\mu_1 - \mu_2\|_p^p$.
     """
     cost = jtu.Partial(lpp_metric, p=p)
@@ -185,17 +187,17 @@ def gaussian_sinkhorn_divergence(
     means: tuple[Mean, Mean],
     covs: tuple[Cov, Cov],
     sigma: RealScalarLike,
-    cost: Callable[[Mean, Mean], RealScalarLike] = lambda x, y: lpp_metric(x, y),
+    cost: Callable[[Mean, Mean], RealScalarLike] = lpp_metric,
 ) -> RealScalarLike:
     r"""Sinkhorn divergence between two multi-variate Gaussian distributions, based on
     the closed form in [`@janati2020`];
-    $S_\sigma(x_1, x_2) = \text{OT}_\sigma(x_1, x_2) - \frac{1}{2}(
-    \text{OT}_\sigma(x_1, x_1) + \text{OT}_\sigma(x_2, x_2))$;
+    $S_{\sigma,c}(x_1, x_2) = \text{OT}_{\sigma,c}(x_1, x_2) - \frac{1}{2}(
+    \text{OT}_{\sigma,c}(x_1, x_1) + \text{OT}_{\sigma,c}(x_2, x_2))$;
 
     where:
 
     - $x_1 \sim \text{Normal}(\mu_1, \Sigma_1)$ and $x_2 \sim \text{Normal}(\mu_2, \Sigma_2)$;
-    - $\text{OT}_{\sigma,c}(x_1, x_2) is the [`mccube.gaussian_optimal_transport`][];
+    - $\text{OT}_{\sigma,c}(x_1, x_2)$ is the [`mccube.gaussian_optimal_transport`][];
     - $\sigma \ge 0$ is the regularization parameter.
     - $c(\cdot, \cdot)$ is the "ground cost" to move a unit of mass.
 
@@ -203,10 +205,10 @@ def gaussian_sinkhorn_divergence(
 
     - If $\sigma \to 0$, and $c(\mu_1, \mu_2) = \|\mu_1 - \mu_2\|_p^p$, the sinkhorn
     divergence is the optimal transport, which is itself the p-Wasserstein metric raised
-    to the power of $W_p^p(x_1, x_2)$.
+    to the power $p$; $W_p^p(x_1, x_2)$.
     - If $\sigma = \infty$, the sinkhorn divergence is the maximum mean discrepancy
-    (MMD) with a $-c$ kernel. If, additionaly, $c(\mu_1, \mu_2) = \|\mu_1 - \mu_2\|_p^p$
-    and $1 < p < 2, the MMD is the energy distance [`@genevay2018`].
+    (MMD) with a $-c$ kernel. If, additionally, $c(\mu_1, \mu_2) = \|\mu_1 - \mu_2\|_p^p$
+    and $1 < p < 2$, the MMD is the energy distance [`@genevay2018`].
 
     ??? cite "Reference: [`@janati2020`]"
 
@@ -230,7 +232,7 @@ def gaussian_sinkhorn_divergence(
     ??? cite "Reference: [`@genevay2018`]"
 
         ```bibtex
-        @InProceedings{pmlr-v84-genevay18a,
+        @inproceedings{genevay2018,
           title     = {Learning Generative Models with Sinkhorn Divergences},
           author    = {Genevay, Aude and Peyre, Gabriel and Cuturi, Marco},
           year      = {2018},
@@ -246,16 +248,6 @@ def gaussian_sinkhorn_divergence(
           url       = {https://proceedings.mlr.press/v84/genevay18a.html},
         }
         ```
-
-    Args:
-        means: is a tuple of two `d` dimensional mean vectors.
-        covs: is a tuple of two `d x d` dimensional covariance matrices.
-        sigma: is the regularization coefficient.
-        cost: is the "ground cost" to move a unit of mass.
-
-    Returns:
-        The closed form Sinkhorn divergence betwen the `d` dimensional Gaussian
-            distributions parameterised by the `means` and `covs`.
     """
     mean1, mean2 = means
     cov1, cov2 = covs
@@ -268,11 +260,11 @@ def gaussian_sinkhorn_divergence(
 def gaussian_maximum_mean_discrepancy(
     mean1: Mean,
     mean2: Mean,
-    cost: Callable[[Mean, Mean], RealScalarLike] = lambda x, y: lpp_metric(x, y),
+    cost: Callable[[Mean, Mean], RealScalarLike] = lpp_metric,
 ) -> RealScalarLike:
-    r"""Maximum mean discrepancy (MMD) between two multi-variate Gaussian distributions.
-    Equivalent to [`mccube.gaussian_sinkhorn_divergence`][] at the limit
-    $\sigma to \infty$, with arbitrary covariances and $-c$ "ground cost".
+    r"""Maximum mean discrepancy ($\text{MMD}_{-c}$) between two multi-variate Gaussian
+    distributions. Equivalent to [`mccube.gaussian_sinkhorn_divergence`][] at the limit
+    $\sigma \to \infty$, with arbitrary covariances and $-c$ "ground cost".
     """
     return cost(mean1, mean2)
 
@@ -307,14 +299,16 @@ def gaussian_kl_divergence(
 
     sign_1, logdet_cov1 = jnp.linalg.slogdet(cov1)
     sign_2, logdet_cov2 = jnp.linalg.slogdet(cov2)
-    eqx.error_if(
-        (sign_1, sign_2),
-        sign_1 <= 0 or sign_2 <= 0,
-        "Covariance matrices must be positive definite",
-    )
-    cov2_inv = jnp.linalg.inv(cov2)
+    multi_linear_solve = jax.vmap(lx.linear_solve, (None, 1))
+
+    cov2 = lx.MatrixLinearOperator(cov2, lx.positive_semidefinite_tag)
+    cov2_inv_cov1 = multi_linear_solve(cov2, cov1).value
     mean_delta = mean2 - mean1
-    term0 = logdet_cov2 - logdet_cov1
-    term1 = -d + jnp.trace(cov2_inv @ cov1)
-    term2 = mean_delta.T @ cov2_inv @ mean_delta
-    return (term0 + term1 + term2) / 2
+    cov2_inv_mean_delta = lx.linear_solve(cov2, mean_delta).value
+
+    return (
+        (logdet_cov2 - logdet_cov1)
+        - d
+        + jnp.trace(cov2_inv_cov1)
+        + mean_delta.T @ cov2_inv_mean_delta
+    ) / 2
