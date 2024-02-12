@@ -27,7 +27,7 @@ class MonteCarloKernel(AbstractRecombinationKernel):
         import jax.numpy as jnp
         import jax.random as jr
 
-        key = jr.PRNGKey(42)
+        key = jr.key(42)
         kernel = mccube.MonteCarloKernel({"y": 3}, key=key)
         y0 = {"y": jnp.ones((10,2))}
         result = kernel(..., y0, ...)
@@ -80,7 +80,7 @@ class MonteCarloPartitioningKernel(AbstractPartitioningKernel):
         import jax.numpy as jnp
         import jax.random as jr
 
-        key = jr.PRNGKey(42)
+        key = jr.key(42)
         kernel = mccube.MonteCarloKernel(..., key=key)
         partitioning_kernel = mccube.MonteCarloPartitioningKernel(4, kernel)
         y0 = jnp.ones((12,2))
