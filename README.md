@@ -57,7 +57,7 @@ from mccube import (
     gaussian_wasserstein_metric,
 )
 
-key = jr.PRNGKey(42)
+key = jr.key(42)
 n, d = 512, 10
 t0 = 0.0
 epochs = 512

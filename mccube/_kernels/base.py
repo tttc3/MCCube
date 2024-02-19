@@ -111,7 +111,7 @@ class PartitioningRecombinationKernel(AbstractRecombinationKernel):
         import jax.numpy as jnp
         import jax.random as jr
 
-        key = jr.PRNGKey(42)
+        key = jr.key(42)
 
         y0 = jnp.ones((64,8))
         n, d = y0.shape

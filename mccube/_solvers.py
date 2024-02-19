@@ -52,7 +52,7 @@ class MCCSolver(AbstractWrappedSolver[_SolverState]):
         import jax.random as jr
         from diffrax import diffeqsolve, Euler
 
-        key, rng_key = jr.split(jr.PRNGKey(42))
+        key, rng_key = jr.split(jr.key(42))
         t0, t1 = 0.0, 1.0
         dt0 = 0.001
         particles = jnp.ones((32,8))
