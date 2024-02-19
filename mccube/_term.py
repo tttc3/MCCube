@@ -2,10 +2,10 @@
 
 See [`diffrax.AbstractTerm`][] for further information on the terms API.
 """
+import equinox as eqx
+import jax.tree_util as jtu
 from diffrax import AbstractTerm, ODETerm, WeaklyDiagonalControlTerm
 from equinox.internal import ω
-import jax.tree_util as jtu
-import equinox as eqx
 from jaxtyping import ArrayLike, PyTree
 
 from ._custom_types import (

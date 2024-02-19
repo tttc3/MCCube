@@ -66,10 +66,13 @@ formats = "ipynb, md"
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
 fixable = ["I001", "F401"]
 ignore = ["F722"]
+select = ["I001"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true
 extra-standard-library = ["typing_extensions"]
 order-by-type = false
