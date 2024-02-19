@@ -54,14 +54,10 @@ def test_diffrax_ula():
 
 def test_MCCSolver_init():
     key = jr.key(42)
-    with pytest.raises(ValueError) as e, pytest.warns(UserWarning) as w:
+    with pytest.raises(
+        ValueError, match="n_substeps must be at least one;"
+    ), pytest.warns(UserWarning, match="diffrax.Euler solver"):
         mccube.MCCSolver(EulerHeun(), mccube.MonteCarloKernel(10, key=key), 0)
-
-    assert e.type is ValueError
-    assert "n_substeps must be at least one;" in e.value.args[0]
-
-    assert len(w) == 1
-    assert "diffrax.Euler solver" in w[0].message.args[0]  # type: ignore
 
 
 @pytest.mark.parametrize("formula", gaussian_formulae)

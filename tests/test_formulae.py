@@ -44,7 +44,7 @@ def test_cubature_registry():
 
 
 @pytest.mark.parametrize(
-    "degree, sparse_only, minimal_only, expected_result",
+    ("degree", "sparse_only", "minimal_only", "expected_result"),
     [
         pytest.param(
             None,
@@ -130,7 +130,7 @@ def test_points_permutations():
 
 
 @pytest.mark.parametrize(
-    "formula, degree, test_region_dims",
+    ("formula", "degree", "test_region_dims"),
     [
         pytest.param(mccube.Hadamard, 3, [1, 2, 3, 4], id="Hadamard, d=[1,2,3,4]"),
         pytest.param(
