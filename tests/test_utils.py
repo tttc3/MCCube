@@ -1,6 +1,7 @@
-import mccube
 import equinox as eqx
 import jax.numpy as jnp
+
+import mccube
 
 
 def test_pack_pacticles():

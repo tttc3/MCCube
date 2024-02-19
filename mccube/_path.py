@@ -6,7 +6,7 @@ import equinox as eqx
 import jax.numpy as jnp
 from diffrax import AbstractPath
 
-from ._custom_types import CubaturePoints, RealScalarLike, CubatureWeights
+from ._custom_types import CubaturePoints, CubatureWeights, RealScalarLike
 from ._formulae import AbstractGaussianCubature
 
 

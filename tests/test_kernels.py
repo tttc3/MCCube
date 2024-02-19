@@ -8,8 +8,8 @@ import mccube
 from mccube._custom_types import (
     Args,
     Particles,
-    RealScalarLike,
     PartitionedParticles,
+    RealScalarLike,
     RecombinedParticles,
 )
 from mccube._kernels.random import MonteCarloKernel
