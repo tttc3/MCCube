@@ -70,7 +70,7 @@ extend-include = ["*.ipynb"]
 [tool.ruff.lint]
 fixable = ["I001", "F401"]
 ignore = ["F722"]
-select = ["I001"]
+select = ["I001", "PT"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
