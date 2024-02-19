@@ -457,7 +457,8 @@ class StroudSecrest63_53(AbstractGaussianCubature):
 
     def __check_init__(self):
         d = self.region.dimension
-        if d <= 2:
+        minimum_valid_dimension = 3
+        if d < minimum_valid_dimension:
             raise ValueError(
                 f"StroudSecrest63_53 is only valid for regions with d > 2; got d={d}"
             )
@@ -599,7 +600,7 @@ def search_cubature_registry(
         searchable_formulae: collection from which to search for suitable cubature
             formulae.
     """
-    selected_formulae = list()
+    selected_formulae = []
     minimum_point_count = float("inf")
     for f in searchable_formulae:
         # Try to instantiate the formula in order to establish a point count.

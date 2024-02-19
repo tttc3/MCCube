@@ -26,7 +26,6 @@ from ._kernels import AbstractRecombinationKernel
 from ._term import MCCTerm
 from ._utils import pack_particles, unpack_particles
 
-_ErrorEstimate: TypeAlias = None
 _SolverState: TypeAlias = None
 
 
@@ -97,7 +96,8 @@ class MCCSolver(AbstractWrappedSolver[_SolverState]):
         if not isinstance(self.solver, Euler):
             warnings.warn(
                 f"""Support is only provided for the diffrax.Euler solver at present;
-                got {self.solver}. Expect undefined behaviour!"""
+                got {self.solver}. Expect undefined behaviour!""",
+                stacklevel=1,
             )
         if self.n_substeps < 1:
             raise ValueError(f"n_substeps must be at least one; got {self.n_substeps}")
@@ -129,7 +129,7 @@ class MCCSolver(AbstractWrappedSolver[_SolverState]):
         _t0 = t0
         _t1 = t0 + dt_substep
 
-        for i in range(0, self.n_substeps):
+        for _ in range(self.n_substeps):
             _t0 = _t1
             _t1 = _t0 + dt_substep
             _sol = self.solver.step(terms, _t0, _t1, _y0, args, solver_state, made_jump)
@@ -144,7 +144,7 @@ class MCCSolver(AbstractWrappedSolver[_SolverState]):
         y1_hat = self.recombination_kernel(t0, y1_packed, args, self.weighted)
         # Used to renormalize the weights post recombination.
         y1_res = pack_particles(*unpack_particles(y1_hat, weighted=self.weighted))
-        dense_info = dict(y0=y0, y1=y1_hat)
+        dense_info = {"y0": y0, "y1": y1_hat}
         return (y1_res, _sol[1], dense_info, *_sol[3:])  # type: ignore
 
     def func(

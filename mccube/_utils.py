@@ -14,7 +14,6 @@ def nop(*args, **kwargs) -> None:
         # None
         ```
     """
-    ...
 
 
 def pack_particles(
@@ -104,4 +103,3 @@ def all_subclasses(cls: type) -> set[type]:
 def requires_weighing(is_weighted: bool) -> None:
     if not is_weighted:
         raise ValueError("Kernel requires `weighted=True`; got {`weighted=False`}.")
-    return
