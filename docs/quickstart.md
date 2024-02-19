@@ -54,7 +54,7 @@ from mccube import gaussian_wasserstein_metric, unpack_particles
 
 jax.config.update("jax_enable_x64", True)
 
-key, rng_key = jr.split(jr.PRNGKey(42))
+key, rng_key = jr.split(jr.key(42))
 n, d = 512, 10
 t0 = 0.0
 n_epochs = 1024
@@ -133,7 +133,7 @@ def inference_loop(kernel, initial_state, n_epochs, num_chains, *, key):
 
     return states
 
-key, sampler_key = jr.split(jr.PRNGKey(42))
+key, sampler_key = jr.split(jr.key(42))
 sampler = blackjax.mala(logdensity, dt0)
 init_state = jax.vmap(sampler.init)(y0)
 state = inference_loop(
@@ -181,7 +181,7 @@ from mccube import (
     BinaryTreePartitioningKernel,
 )
 
-key = jr.PRNGKey(42)
+key = jr.key(42)
 gaussian_cubature = Hadamard(GaussianRegion(d))
 mcc_cde = diffrax.WeaklyDiagonalControlTerm(
     lambda t, p, args: jnp.sqrt(2.0),

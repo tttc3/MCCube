@@ -71,7 +71,7 @@ def test_monte_carlo_partitioning_kernel():
 
     y0 = jnp.array([[1.0, 0.01], [2.0, 1.0], [3.0, 100.0], [4.0, 10000.0]])
 
-    key = jr.PRNGKey(42)
+    key = jr.key(42)
     mc_kernel = MonteCarloKernel(None, key=key)
     kernel = mccube.MonteCarloPartitioningKernel(n_parts, mc_kernel)
     values = kernel(0.0, y0, ...)
@@ -80,7 +80,7 @@ def test_monte_carlo_partitioning_kernel():
         jnp.unique(values, return_counts=True), jnp.unique(y0, return_counts=True)
     )
 
-    key = jr.PRNGKey(42)
+    key = jr.key(42)
     mc_kernel = MonteCarloKernel(None, weighting_function=lambda x: x, key=key)
     kernel = mccube.MonteCarloPartitioningKernel(n_parts, mc_kernel)
     values = kernel(0.0, y0, ..., weighted=True)
@@ -160,7 +160,7 @@ def test_binary_tree_partitioning_kernel(mode):
 
 #     n, d = 64, 2
 
-#     key = jr.PRNGKey(42)
+#     key = jr.key(42)
 #     y0 = jr.multivariate_normal(key, jnp.zeros(d), jnp.eye(d), (n,))
 #     weights = jnp.arange(1.0, n + 1.0)
 

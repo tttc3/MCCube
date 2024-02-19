@@ -18,7 +18,7 @@ import mccube
 
 from .helpers import gaussian_formulae
 
-key = jr.PRNGKey(42)
+key = jr.key(42)
 init_key, rng_key = jr.split(key)
 t0 = 0.0
 dt0 = 0.05
@@ -46,14 +46,14 @@ def test_diffrax_ula():
     ode = ODETerm(lambda t, p, args: grad_logdensity(p))
     cde = WeaklyDiagonalControlTerm(
         lambda t, p, args: jnp.sqrt(2.0),
-        VirtualBrownianTree(t0, t1, dt0 / 10, (k, d), key=jr.PRNGKey(42)),
+        VirtualBrownianTree(t0, t1, dt0 / 10, (k, d), key=jr.key(42)),
     )
     terms = MultiTerm(ode, cde)
     diffeqsolve(terms, Euler(), t0, t1, dt0, y0)
 
 
 def test_MCCSolver_init():
-    key = jr.PRNGKey(42)
+    key = jr.key(42)
     with pytest.raises(ValueError) as e, pytest.warns(UserWarning) as w:
         mccube.MCCSolver(EulerHeun(), mccube.MonteCarloKernel(10, key=key), 0)
 
