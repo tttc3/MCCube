@@ -83,7 +83,8 @@ def test_MCCSolver_ula(formula):
     sol = diffeqsolve(
         terms, solver, t0, t1, dt0, y0, saveat=SaveAt(dense=True, t1=True)
     )
-    assert sol.ys.shape == (1, k, d)  # type: ignore
+    assert sol.ys is not None
+    assert sol.ys.shape == (1, k, d)
     assert sol.evaluate(t1).shape == (k, d)
 
     n_substeps = 2
@@ -96,7 +97,8 @@ def test_MCCSolver_ula(formula):
     sol2 = diffeqsolve(
         terms, solver2, t0, t1, dt0, y0, saveat=SaveAt(ts=ts, dense=True)
     )
-    assert sol2.ys.shape == (ts.shape[0], k, d)  # type: ignore
+    assert sol2.ys is not None
+    assert sol2.ys.shape == (ts.shape[0], k, d)
     assert sol2.evaluate(t0 + dt0).shape == (k, d)
 
     # Test Weighted Particles
@@ -116,6 +118,8 @@ def test_MCCSolver_ula(formula):
         y0_weighted,
         saveat=SaveAt(t1=True),
     )
-    assert sol_weighted.ys.shape == (1, k, d + 1)  # type: ignore
-    particles, weights = mccube.unpack_particles(sol_weighted.ys[0], weighted=True)  # type: ignore
-    assert eqx.tree_equal(weights.sum(), jnp.array(1.0), rtol=1e-5, atol=1e-8)  # type: ignore
+    assert sol_weighted.ys is not None
+    assert sol_weighted.ys.shape == (1, k, d + 1)
+    particles, weights = mccube.unpack_particles(sol_weighted.ys[0], weighted=True)
+    assert weights is not None
+    assert eqx.tree_equal(weights.sum(), jnp.array(1.0), rtol=1e-5, atol=1e-8)

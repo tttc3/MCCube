@@ -1,5 +1,6 @@
 import itertools
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from typing import cast
 
 import equinox as eqx
 import jax
@@ -16,6 +17,8 @@ from mccube._formulae import (
     builtin_cubature_registry,
 )
 
+ω = cast(Callable, ω)
+
 
 def _base_formulae_tests(f):
     # Check points, weights, and point_count are consistent.
@@ -26,7 +29,7 @@ def _base_formulae_tests(f):
     assert f.stacked_points.shape[0] == f.stacked_weights.shape[0]
     stacked_points = np.vstack(f.points)
     weight_array = jtu.tree_map(lambda x: np.ones(x.shape[0]), f.points)
-    stacked_weights = np.hstack((ω(f.weights) * ω(weight_array)).ω)  # pyright: ignore
+    stacked_weights = np.hstack((ω(f.weights) * ω(weight_array)).ω)
     assert eqx.tree_equal(f.stacked_points, stacked_points)
     assert eqx.tree_equal(f.stacked_weights, stacked_weights)
 
@@ -81,14 +84,20 @@ def test_search_cubature_registry(degree, sparse_only, minimal_only, expected_re
     }
     region = mccube.GaussianRegion(5)
     result = mccube.search_cubature_registry(
-        region, degree, sparse_only, minimal_only, test_registry
+        region,
+        degree,
+        sparse_only=sparse_only,
+        minimal_only=minimal_only,
+        searchable_formulae=test_registry,
     )
     _expected_result = jtu.tree_map(lambda f: f(region), expected_result)
     assert eqx.tree_equal(result, _expected_result)
 
 
 def test_search_cubature_registry_default():
-    mccube.search_cubature_registry(mccube.GaussianRegion(5), 3, False, True)
+    mccube.search_cubature_registry(
+        mccube.GaussianRegion(5), 3, sparse_only=False, minimal_only=True
+    )
 
 
 def test_points_permutations():
@@ -153,9 +162,10 @@ def test_gaussian_cubature(formula, degree, test_region_dims):
         for monomial in _monomial_generator(f.region.dimension, degree):
             coeffs = np.zeros((degree + 1, dim))
             coeffs[monomial, np.arange(0, dim)] = 1
-            integrand = lambda x: np.prod(  # noqa: E731
-                polyval(x, coeffs, tensor=False)
-            )
+
+            def integrand(x, coeffs=coeffs):
+                return np.prod(polyval(x, coeffs, tensor=False))
+
             test_integral = _generalized_hermite_monomial_integral(monomial)
             trial_integral = f(integrand)[0]
             assert eqx.tree_equal(test_integral, trial_integral, rtol=1e-5, atol=1e-8)
@@ -180,12 +190,12 @@ def _monomial_generator(
 def _generalized_hermite_monomial_integral(
     monomial: tuple[int, ...], alpha: float = 1 / 2, normalized: bool = True
 ):
-    if any((monomial**ω % 2).ω):
+    if any((ω(monomial) % 2).ω):
         return jax.numpy.array(0.0)
     normalization_constant = 1.0
     if normalized:
         dim = len(monomial)
         normalization_constant = (alpha ** (-1 / 2) * gamma(1 / 2)) ** dim
-    exponent = ((monomial**ω + 1) / 2).ω
+    exponent = ((ω(monomial) + 1) / 2).ω
     integral = np.prod(jtu.tree_map(lambda m: alpha**-m * gamma(m), exponent))
     return integral / normalization_constant

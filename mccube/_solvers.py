@@ -83,7 +83,7 @@ class MCCSolver(AbstractWrappedSolver[_SolverState]):
             the number of cubature vectors/paths.**
     """
 
-    solver: AbstractSolver[_SolverState]  # type: ignore
+    solver: AbstractSolver[_SolverState]
     recombination_kernel: AbstractRecombinationKernel
     n_substeps: int = 1
     weighted: bool = False
@@ -100,7 +100,8 @@ class MCCSolver(AbstractWrappedSolver[_SolverState]):
                 stacklevel=1,
             )
         if self.n_substeps < 1:
-            raise ValueError(f"n_substeps must be at least one; got {self.n_substeps}")
+            msg = f"n_substeps must be at least one; got {self.n_substeps}"
+            raise ValueError(msg)
 
     def init(
         self,
@@ -109,7 +110,7 @@ class MCCSolver(AbstractWrappedSolver[_SolverState]):
         t1: RealScalarLike,
         y0: Particles,
         args: Args,
-    ):
+    ) -> _SolverState:
         return self.solver.init(terms, t0, t1, y0, args)
 
     def step(
@@ -128,7 +129,8 @@ class MCCSolver(AbstractWrappedSolver[_SolverState]):
         _y0 = _y0[:, None, :]
         _t0 = t0
         _t1 = t0 + dt_substep
-
+        _sol = tuple()
+        # Shape of `y` changes on each itteration, so can't use JAX loop primitives.
         for _ in range(self.n_substeps):
             _t0 = _t1
             _t1 = _t0 + dt_substep
@@ -139,13 +141,13 @@ class MCCSolver(AbstractWrappedSolver[_SolverState]):
                 cde_cubature_weights = terms.term.cde.control.weights[..., None]
                 weights = weights[None, ...] * cde_cubature_weights
                 weights = weights.reshape(-1)
-        y1 = _sol[0]  # type: ignore
+        y1 = _sol[0]
         y1_packed = pack_particles(y1, weights)
         y1_hat = self.recombination_kernel(t0, y1_packed, args, self.weighted)
         # Used to renormalize the weights post recombination.
         y1_res = pack_particles(*unpack_particles(y1_hat, weighted=self.weighted))
         dense_info = {"y0": y0, "y1": y1_hat}
-        return (y1_res, _sol[1], dense_info, *_sol[3:])  # type: ignore
+        return (y1_res, _sol[1], dense_info) + _sol[3:]
 
     def func(
         self, terms: PyTree[AbstractTerm], t0: RealScalarLike, y0: Particles, args: Args

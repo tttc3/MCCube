@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 import jax.numpy as jnp
 import jax.tree_util as jtu
-from jaxtyping import ArrayLike, Shaped
+from jaxtyping import Array, ArrayLike, Shaped
 
 from .._custom_types import Args, Particles, PartitionedParticles, RealScalarLike
 from .._metrics import center_of_mass
@@ -33,7 +33,11 @@ class StratifiedPartitioningKernel(AbstractPartitioningKernel):
         args: Args,
         weighted: bool = False,
     ) -> PartitionedParticles:
-        def _stratified_partitioning(_p, _count):
+        del t, args
+
+        def _stratified_partitioning(
+            _p: Shaped[Array, "n d"], _count: int
+        ) -> Shaped[Array, "m n_div_m d"]:
             if self.norm is None:
                 return _p.reshape(_count, -1, _p.shape[-1])
             _p_unpacked, _w = unpack_particles(_p, weighted)

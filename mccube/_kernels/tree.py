@@ -5,10 +5,18 @@ import jax
 import jax.numpy as jnp
 import jax.tree_util as jtu
 import numpy as np
+from jaxtyping import Shaped
+from optimistix._solver.nelder_mead import ArrayLike
 from sklearn.metrics import DistanceMetric
 from sklearn.neighbors import BallTree, KDTree
 
-from .._custom_types import Args, Particles, PartitionedParticles, RealScalarLike
+from .._custom_types import (
+    Args,
+    IntScalarLike,
+    Particles,
+    PartitionedParticles,
+    RealScalarLike,
+)
 from .._utils import unpack_particles
 from .base import AbstractPartitioningKernel
 
@@ -41,20 +49,26 @@ class BinaryTreePartitioningKernel(AbstractPartitioningKernel):
         args: Args,
         weighted: bool = False,
     ) -> PartitionedParticles:
-        def _tree_fn(p, leaf_size):
+        del t, args
+
+        def _tree_fn(
+            p: Shaped[ArrayLike, "n d"], leaf_size: IntScalarLike
+        ) -> Shaped[ArrayLike, "n_div_m idx"]:
             t = trees[self.mode](p, leaf_size, self.metric, **self.metric_kwargs)
             indices = t.get_arrays()[1].reshape(-1, leaf_size)
             return indices.astype(np.int32)
 
-        def _tree_partitioning(p, count):
-            leaf_size = p.shape[0] // count
+        def _tree_partitioning(
+            p: Shaped[ArrayLike, "n d"], count: IntScalarLike
+        ) -> Shaped[ArrayLike, "m n_div_m d"]:
+            leaf_size = jnp.shape(p)[0] // count
             shape = (count, leaf_size)
             dtype = jnp.int32
             result_shape_dtype = jax.ShapeDtypeStruct(shape, dtype)
             p_unpacked, _ = unpack_particles(p, weighted)
-            indices = jax.pure_callback(  # type: ignore
+            indices = jax.pure_callback(  # pyright: ignore[reportPrivateImportUsage]
                 _tree_fn, result_shape_dtype, p_unpacked, leaf_size
             )
-            return p[indices]
+            return jnp.asarray(p)[indices]
 
         return jtu.tree_map(_tree_partitioning, particles, self.partition_count)

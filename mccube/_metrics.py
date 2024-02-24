@@ -1,4 +1,6 @@
 """Defines helpful metrics and dissimilarity measures."""
+from collections.abc import Callable
+
 import jax
 import jax.numpy as jnp
 import jax.tree_util as jtu
@@ -61,7 +63,9 @@ def squared_euclidean_metric(
 
 
 def pairwise_metric(
-    xs: Particles, ys: Particles, metric=euclidean_metric
+    xs: Particles,
+    ys: Particles,
+    metric: Callable[[ArrayLike, ArrayLike], RealScalarLike] = euclidean_metric,
 ) -> PyTree[Shaped[ArrayLike, "?n ?n"], "Particles"]:
     """Pairwise metric between two PyTrees of `n` vectors of dimension `d`.
 

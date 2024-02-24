@@ -12,7 +12,6 @@ from mccube._custom_types import (
     RealScalarLike,
     RecombinedParticles,
 )
-from mccube._kernels.random import MonteCarloKernel
 
 
 # _kernels/base.py
@@ -25,6 +24,7 @@ def test_partitioning_recombination_kernel():
             args: Args,
             weighted: bool = False,
         ) -> PartitionedParticles:
+            del t, args, weighted
             return jtu.tree_map(
                 lambda p, c: p.reshape(-1, c, p.shape[-1]),
                 particles,
@@ -39,6 +39,7 @@ def test_partitioning_recombination_kernel():
             args: Args,
             weighted: bool = False,
         ) -> RecombinedParticles:
+            del t, args, weighted
             return jtu.tree_map(lambda p, c: p[:c], particles, self.recombination_count)
 
     y0 = jnp.array([[2.0, 4.0, 6.0, 8.0]]).T
@@ -72,7 +73,7 @@ def test_monte_carlo_partitioning_kernel():
     y0 = jnp.array([[1.0, 0.01], [2.0, 1.0], [3.0, 100.0], [4.0, 10000.0]])
 
     key = jr.key(42)
-    mc_kernel = MonteCarloKernel(None, key=key)
+    mc_kernel = mccube.MonteCarloKernel(None, key=key)
     kernel = mccube.MonteCarloPartitioningKernel(n_parts, mc_kernel)
     values = kernel(0.0, y0, ...)
     assert values.shape == (n_parts, y0.shape[0] // n_parts, y0.shape[-1])
@@ -81,7 +82,7 @@ def test_monte_carlo_partitioning_kernel():
     )
 
     key = jr.key(42)
-    mc_kernel = MonteCarloKernel(None, weighting_function=lambda x: x, key=key)
+    mc_kernel = mccube.MonteCarloKernel(None, weighting_function=lambda x: x, key=key)
     kernel = mccube.MonteCarloPartitioningKernel(n_parts, mc_kernel)
     values = kernel(0.0, y0, ..., weighted=True)
     assert values.shape == (n_parts, y0.shape[0] // n_parts, y0.shape[-1])
@@ -103,9 +104,9 @@ def test_stratified_partitioning_kernel():
     # fmt: off
     expected_partitioning = jnp.array(
         [
-            [[-1.0], [1.0]], 
-            [[-2.0], [2.0]], 
-            [[-3.0], [3.0]], 
+            [[-1.0], [1.0]],
+            [[-2.0], [2.0]],
+            [[-3.0], [3.0]],
             [[-4.0], [4.0]]
         ]
     )

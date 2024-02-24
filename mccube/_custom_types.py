@@ -1,22 +1,21 @@
-"""Defines custom types that are used throughout the package. The following symbols 
+"""Defines custom types that are used throughout the package. The following symbols
 are used in the definitions of the custom types:
 
 -   **d**: the dimensionality of the particles.
 -   **n**: the number of particles.
 -   **n_hat**: the number of recombined particles.
--   **k**: the number of versions of a particles (resulting from the same number of 
+-   **k**: the number of versions of a particles (resulting from the same number of
 cubature paths/points).
 -   **m**: the number of partitions of the particles.
 """
-
 from typing import Any, TYPE_CHECKING
 
-import numpy as np
-import numpy.typing as npt
 from jaxtyping import Array, ArrayLike, Bool, Float, Int, PyTree, Shaped
 
-# These are identical to the definitions in diffrax.
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
+    import numpy.typing as npt
+
     BoolScalarLike = bool | Array | npt.NDArray[np.bool_]
     FloatScalarLike = float | Array | npt.NDArray[np.float_]
     IntScalarLike = int | Array | npt.NDArray[np.int_]
@@ -33,16 +32,16 @@ Particles = PyTree[Shaped[Array, "?n d"], "P"]
 """A PyTree where each leaf is an array of `n` particles of dimension `d`."""
 
 PartitionedParticles = PyTree[Shaped[Array, "?m ?n_div_m d"], "P"]
-"""A [`Particles`][mccube._custom_types.Particles] PyTree where each leaf has been 
+"""A [`Particles`][mccube._custom_types.Particles] PyTree where each leaf has been
 reorganised into `m` equally sized partitions of `n/m` particles of dimension `d`."""
 
 RecombinedParticles = PyTree[Shaped[Array, "?n_hat d"], "P"]
-"""A [`Particles`][mccube._custom_types.Particles] PyTree where each leaf has been 
+"""A [`Particles`][mccube._custom_types.Particles] PyTree where each leaf has been
 recombined/compressed into `n_hat < n` particles of dimension `d`."""
 
 UnpackedParticles = PyTree[Shaped[Array, "?n d-1"], "P"]
-"""A [`Particles`][mccube._custom_types.Particles] PyTree of `n` particles of dimension 
-`d-1`, which have been unpacked from a PyTree of `n` particles of dimension `d`, where 
+"""A [`Particles`][mccube._custom_types.Particles] PyTree of `n` particles of dimension
+`d-1`, which have been unpacked from a PyTree of `n` particles of dimension `d`, where
 the `d`-th dimension represents the particle [`Weights`][mccube._custom_types.Weights]."""
 
 PackedParticles = PyTree[Shaped[Array, "?n d+1"], "P"]
@@ -52,7 +51,8 @@ which have been packed from a PyTree of `n` particles of dimension `d`, and a Py
 `n` weights."""
 
 Weights = PyTree[Shaped[Array, "?*n"] | None, "P"]
-"""A PyTree where each leaf is an array of `n` [`Weights`][mccube._custom_types.Weights] or [`None`][]."""
+"""A PyTree where each leaf is an array of `n` [`Weights`][mccube._custom_types.Weights]
+or [`None`][]."""
 
 Args = PyTree[Any]
 """A PyTree of auxillary arguments."""
