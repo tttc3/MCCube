@@ -94,8 +94,8 @@ def test_search_cubature_registry_default():
 def test_points_permutations():
     a = np.array([3, 0, 0])
     # Fully symmetric group, GS_d.
-    a_FS = _generate_point_permutations(a, "FS")
-    a_FS_expected = np.array(
+    a_fs = _generate_point_permutations(a, "FS")
+    a_fs_expected = np.array(
         [
             [-3, 0, 0],
             [0, -3, 0],
@@ -105,16 +105,16 @@ def test_points_permutations():
             [3, 0, 0],
         ]
     )
-    eqx.tree_equal(a_FS, a_FS_expected)
+    eqx.tree_equal(a_fs, a_fs_expected)
     d = np.shape(a)[0]
     # Symmetry group, S_d.
-    a_S = _generate_point_permutations(a, "S")
-    a_S_expected = np.atleast_2d(a_FS)[d:, :]
-    eqx.tree_equal(a_S, a_S_expected)
+    a_s = _generate_point_permutations(a, "S")
+    a_s_expected = np.atleast_2d(a_fs)[d:, :]
+    eqx.tree_equal(a_s, a_s_expected)
     # Reflection group, G_d.
     b = np.array([3, 3, 3])
-    b_R = _generate_point_permutations(b, "R")
-    b_R_expected = np.array(
+    b_r = _generate_point_permutations(b, "R")
+    b_r_expected = np.array(
         [
             [-3, -3, -3],
             [-3, -3, 3],
@@ -126,7 +126,7 @@ def test_points_permutations():
             [3, 3, 3],
         ]
     )
-    eqx.tree_equal(b_R, b_R_expected)
+    eqx.tree_equal(b_r, b_r_expected)
 
 
 @pytest.mark.parametrize(
