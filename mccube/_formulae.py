@@ -1,4 +1,4 @@
-"""Defines cubature formulae for integrating functions over the regions (measure spaces) 
+"""Defines cubature formulae for integrating functions over the regions (measure spaces)
 defined as [`AbstractRegions`][mccube.AbstractRegion].
 """
 import abc
@@ -388,11 +388,11 @@ class StroudSecrest63_52(AbstractGaussianCubature):
     @cached_property
     def weights(self) -> CubatureWeightsTree:
         d = self.region.dimension
-        V = self.region.volume
-        A = 2 / (d + 2) * V
-        B = (4 - d) / (2 * (d + 2) ** 2) * V
-        C = 1 / (d + 2) ** 2 * V
-        return (A, B, C)
+        v = self.region.volume
+        a = 2 / (d + 2) * v
+        b = (4 - d) / (2 * (d + 2) ** 2) * v
+        c = 1 / (d + 2) ** 2 * v
+        return (a, b, c)
 
     @cached_property
     def points(self) -> CubaturePointsTree:
@@ -400,14 +400,14 @@ class StroudSecrest63_52(AbstractGaussianCubature):
         # Rescaled from physicist's to probablist's Hermite measure.
         r2 = d + 2
         s2 = (d + 2) / 2
-        A_points = np.zeros((1, d))
-        B_points = np.copy(A_points)
-        B_points[0, 0] = r2**0.5
-        B_points = _generate_point_permutations(B_points, "FS")
-        C_points = np.copy(A_points)
-        C_points[0, :2] = s2**0.5
-        C_points = _generate_point_permutations(C_points, "FS")
-        return (A_points, B_points, C_points)
+        a_points = np.zeros((1, d))
+        b_points = np.copy(a_points)
+        b_points[0, 0] = r2**0.5
+        b_points = _generate_point_permutations(b_points, "FS")
+        c_points = np.copy(a_points)
+        c_points[0, :2] = s2**0.5
+        c_points = _generate_point_permutations(c_points, "FS")
+        return (a_points, b_points, c_points)
 
     @cached_property
     def point_count(self) -> IntScalarLike:
@@ -466,21 +466,21 @@ class StroudSecrest63_53(AbstractGaussianCubature):
     @cached_property
     def weights(self) -> CubatureWeightsTree:
         d = self.region.dimension
-        A = 8 * d / (d + 2) ** 2 / self.points[0].shape[0]
-        B = ((d - 2) / (d + 2)) ** 2 / self.points[1].shape[0]
-        return (A, B)
+        a = 8 * d / (d + 2) ** 2 / self.points[0].shape[0]
+        b = ((d - 2) / (d + 2)) ** 2 / self.points[1].shape[0]
+        return (a, b)
 
     @cached_property
     def points(self) -> CubaturePointsTree:
         d = self.region.dimension
         r2 = (d + 2) / 2
         s2 = (d + 2) / (d - 2)
-        A_points = np.zeros((1, d))
-        A_points[0, 0] = r2**0.5
-        A_points = _generate_point_permutations(A_points, "FS")
-        B_points = s2**0.5 * np.ones(d)
-        B_points = _generate_point_permutations(B_points, "R")
-        return (A_points, B_points)
+        a_points = np.zeros((1, d))
+        a_points[0, 0] = r2**0.5
+        a_points = _generate_point_permutations(a_points, "FS")
+        b_points = s2**0.5 * np.ones(d)
+        b_points = _generate_point_permutations(b_points, "R")
+        return (a_points, b_points)
 
     @cached_property
     def point_count(self) -> IntScalarLike:
@@ -570,7 +570,7 @@ def _generate_point_permutations(
 builtin_cubature_registry: set[type[AbstractCubature]] = all_subclasses(
     AbstractCubature
 )
-"""A searchable registry of all cubature formulae, in the current scope, that are 
+"""A searchable registry of all cubature formulae, in the current scope, that are
 subclasses of [`mccube.AbstractCubature`][]."""
 
 
