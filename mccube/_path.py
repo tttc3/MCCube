@@ -71,6 +71,6 @@ class LocalLinearCubaturePath(AbstractCubaturePath):
         return points
 
     @property
-    def weights(self) -> CubatureWeights:  # type: ignore
+    def weights(self) -> CubatureWeights:
         """Vector of cubature weights associated with the cubature control paths."""
         return self.gaussian_cubature.stacked_weights

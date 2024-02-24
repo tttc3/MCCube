@@ -5,7 +5,7 @@ import abc
 import itertools
 from collections.abc import Callable, Collection
 from functools import cached_property
-from typing import Generic, Literal, TypeVar
+from typing import cast, Generic, Literal, TypeVar
 
 import equinox as eqx
 import jax
@@ -27,6 +27,7 @@ from ._custom_types import (
 from ._regions import AbstractRegion, GaussianRegion
 from ._utils import all_subclasses
 
+ω = cast(Callable, ω)
 _Region = TypeVar("_Region", bound=AbstractRegion)
 
 
@@ -77,25 +78,22 @@ class AbstractCubature(eqx.Module, Generic[_Region]):
     @abc.abstractmethod
     def weights(self) -> CubatureWeightsTree:
         r"""A PyTree of Cubature weights $\lambda_j \in \mathbb{R}_+$ for the measure $\mu$."""
-        ...
 
     @cached_property
     @abc.abstractmethod
     def points(self) -> CubaturePointsTree:
         r"""A PyTree of Cubature points $x_j \in \Omega$ for the measure $\mu$."""
-        ...
 
     @cached_property
     @abc.abstractmethod
     def point_count(self) -> IntScalarLike:
         r"""Cubature point count $k$."""
-        ...
 
     @cached_property
     def stacked_weights(self) -> CubatureWeights:
         """[`weights`][mccube.AbstractCubature.weights] stacked into a single vector."""
         weight_array = jtu.tree_map(lambda x: np.ones(x.shape[0]), self.points)
-        return np.hstack((ω(self.weights) * ω(weight_array)).ω)  # pyright: ignore
+        return np.hstack((ω(self.weights) * ω(weight_array)).ω)
 
     @cached_property
     def stacked_points(self) -> CubaturePoints:
@@ -111,7 +109,7 @@ class AbstractCubature(eqx.Module, Generic[_Region]):
         Computes the cubature formula $Q[f] = \sum_{j=1}^{k} \lambda_j f(x_j)$.
 
         Args:
-            integrand: the jax transformable function to integrate.
+            integrand: the JAX transformable function to integrate.
 
         Returns:
             Approximated integral and stacked weighted evaluations of $f$ at each
@@ -459,9 +457,8 @@ class StroudSecrest63_53(AbstractGaussianCubature):
         d = self.region.dimension
         minimum_valid_dimension = 3
         if d < minimum_valid_dimension:
-            raise ValueError(
-                f"StroudSecrest63_53 is only valid for regions with d > 2; got d={d}"
-            )
+            msg = f"StroudSecrest63_53 is only valid for regions with d > 2; got d={d}"
+            raise ValueError(msg)
 
     @cached_property
     def weights(self) -> CubatureWeightsTree:
@@ -540,7 +537,8 @@ def _generate_point_permutations(
         ValueError: invalid mode specified.
     """
     if mode not in _modes:
-        raise ValueError(f"Mode must be one of {_modes}, got {mode}.")
+        msg = f"Mode must be one of {_modes}, got {mode}."
+        raise ValueError(msg)
 
     _point = np.atleast_1d(point)
     point_dim = np.shape(_point)[-1]
@@ -577,6 +575,7 @@ subclasses of [`mccube.AbstractCubature`][]."""
 def search_cubature_registry(
     region: AbstractRegion,
     degree: int | None = None,
+    *,
     sparse_only: bool = False,
     minimal_only: bool = False,
     searchable_formulae: Collection[type[AbstractCubature]] = builtin_cubature_registry,

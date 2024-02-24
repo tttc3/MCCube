@@ -2,11 +2,14 @@
 
 See [`diffrax.AbstractTerm`][] for further information on the terms API.
 """
+from collections.abc import Callable
+from typing import cast
+
 import equinox as eqx
 import jax.tree_util as jtu
 from diffrax import AbstractTerm, ODETerm, WeaklyDiagonalControlTerm
 from equinox.internal import ω
-from jaxtyping import ArrayLike, PyTree
+from jaxtyping import Array, ArrayLike, PyTree
 
 from ._custom_types import (
     Args,
@@ -15,8 +18,10 @@ from ._custom_types import (
     RealScalarLike,
 )
 
+ω = cast(Callable, ω)
 
-def _tree_flatten(tree: PyTree[ArrayLike]):
+
+def _tree_flatten(tree: PyTree[Array]) -> PyTree[Array]:
     return jtu.tree_map(
         lambda x: x.reshape(-1, x.shape[-1]), tree, is_leaf=eqx.is_array
     )
@@ -74,4 +79,4 @@ class MCCTerm(AbstractTerm):
     ) -> PyTree[ArrayLike, "Particles"]:
         ode_prod = self.ode.prod(vf[0], control[0])
         cde_prod = self.cde.prod(vf[1], control[1])
-        return (ω(ode_prod)[:, None, ...] + ω(cde_prod)[None, ...]).ω  # type: ignore
+        return (ω(ode_prod)[:, None, ...] + ω(cde_prod)[None, ...]).ω

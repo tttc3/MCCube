@@ -48,7 +48,6 @@ class AbstractKernel(eqx.Module, strict=True):
             A PyTree of transformed particles $p(t)$ with the same PyTree structure and
                 dimension as the input particles, $p(t_0)$.
         """
-        ...
 
 
 class AbstractPartitioningKernel(AbstractKernel):
@@ -65,7 +64,7 @@ class AbstractPartitioningKernel(AbstractKernel):
     partition_count: PyTree[int, "Particles"] | None
 
     @override
-    def __call__(
+    def __call__(  # pragma: no cover
         self,
         t: RealScalarLike,
         particles: Particles,
@@ -159,6 +158,7 @@ class PartitioningRecombinationKernel(AbstractRecombinationKernel):
         _vmap_recombination_kernel = eqx.filter_vmap(
             self.recombination_kernel, in_axes=(None, 0, None, None)
         )
+        # TODO: This needs reconsideration.
         _vmap_tree_compatible_recombination_kernels = jtu.tree_map(
             lambda c: eqx.tree_at(
                 lambda k: k._fun.recombination_count, _vmap_recombination_kernel, c

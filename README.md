@@ -25,18 +25,18 @@ pip install mccube
 ```
 Requires Python 3.9+, Diffrax 0.5.0+, and Equinox 0.11.3+.
 
-By default, a CPU only version of JAX will be installed. To make use of other JAX/XLA 
+By default, a CPU only version of JAX will be installed. To make use of other JAX/XLA
 compatible accelerators (GPUs/TPUs) please follow [these installation instructions](https://github.com/google/jax#pip-installation-gpu-cuda-installed-via-pip-easier).
-Windows support for JAX is currently experimental; WSL2 is the recommended approach for 
+Windows support for JAX is currently experimental; WSL2 is the recommended approach for
 using JAX on Windows.
 
 ## Documentation
 Available at [https://mccube.readthedocs.io/](https://mccube.readthedocs.io/).
 
 ## What is Markov chain cubature?
-MCC is an approach to constructing a [Cubature on Wiener Space](https://www.jstor.org/stable/4143098) 
-which does not suffer from exponential scaling in time (particle count explosion), 
-thanks to the utilization of (partitioned) recombination in the (approximate) cubature 
+MCC is an approach to constructing a [Cubature on Wiener Space](https://www.jstor.org/stable/4143098)
+which does not suffer from exponential scaling in time (particle count explosion),
+thanks to the utilization of (partitioned) recombination in the (approximate) cubature
 kernel.
 
 ### Example

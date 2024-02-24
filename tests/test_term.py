@@ -7,9 +7,11 @@ import mccube
 
 def test_mcc_term():
     def ode_vector_field(t, y, args):
+        del t, args
         return {"y": -y["y"]}
 
     def cde_vector_field(t, y, args):
+        del t, y, args
         return {"y": 1.0}
 
     class Control(diffrax.AbstractPath):
@@ -17,9 +19,11 @@ def test_mcc_term():
         t1 = 1
 
         def evaluate(self, t0, t1=None, left=True):
+            del t0, t1, left
             return {"y": jnp.ones((8, 2))}
 
         def derivative(self, t, left=True):
+            del t, left
             return {"y": jnp.zeros((8, 2))}
 
     control = Control()

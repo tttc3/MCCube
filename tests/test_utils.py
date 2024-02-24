@@ -1,7 +1,9 @@
 import equinox as eqx
 import jax.numpy as jnp
+import pytest
 
 import mccube
+from mccube._utils import requires_weighing
 
 
 def test_pack_pacticles():
@@ -23,3 +25,9 @@ def test_unpack_particles():
     weights = x[:, -1]
     assert eqx.tree_equal((x, None), mccube.unpack_particles(x, False))
     assert eqx.tree_equal((x[:, :-1], weights), mccube.unpack_particles(x, True))
+
+
+def test_requires_weighing():
+    requires_weighing(is_weighted=True)
+    with pytest.raises(ValueError, match="Kernel requires `weighted=True`"):
+        requires_weighing(is_weighted=False)
