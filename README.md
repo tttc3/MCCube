@@ -16,7 +16,7 @@ MCCube provides the tools for performing Markov chain cubature in [diffrax](http
 **Key features:**
 
 - Custom terms, paths, and solvers that provide a painless means to perform MCC in diffrax.
-- A small library of recombination kernels, convential cubature formulae, and metrics.
+- A small library of recombination kernels, conventional cubature formulae, and metrics.
 
 ## Installation
 To install the base pacakge:
