@@ -1,5 +1,5 @@
-r"""This module provides the tools for constructing classes of Markov transition kernels 
-which obey certain desired properties, along with a library of useful kernels for Markov 
+r"""This module provides the tools for constructing classes of Markov transition kernels
+which obey certain desired properties, along with a library of useful kernels for Markov
 Chain Cubature.
 """
 

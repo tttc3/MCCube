@@ -5,7 +5,7 @@ import jax.tree_util as jtu
 from ._custom_types import PackedParticles, Particles, UnpackedParticles, Weights
 
 
-def nop(*args, **kwargs) -> None:
+def nop(*args, **kwargs) -> None:  # noqa: ANN002, ANN003
     """Callable which accepts any arguments and does nothing.
 
     Example:
@@ -14,7 +14,7 @@ def nop(*args, **kwargs) -> None:
         # None
         ```
     """
-    ...
+    del args, kwargs
 
 
 def pack_particles(
@@ -103,5 +103,5 @@ def all_subclasses(cls: type) -> set[type]:
 
 def requires_weighing(is_weighted: bool) -> None:
     if not is_weighted:
-        raise ValueError("Kernel requires `weighted=True`; got {`weighted=False`}.")
-    return
+        msg = "Kernel requires `weighted=True`; got {`weighted=False`}."
+        raise ValueError(msg)

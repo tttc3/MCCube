@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import jax.random as jr
 import jax.tree_util as jtu
 from diffrax._misc import force_bitcast_convert_type, split_by_tree
-from jaxtyping import PRNGKeyArray
+from jaxtyping import Array, PRNGKeyArray, Shaped
 
 from .._custom_types import (
     Args,
@@ -53,11 +53,14 @@ class MonteCarloKernel(AbstractRecombinationKernel):
         args: Args,
         weighted: bool = False,
     ) -> RecombinedParticles | PartitionedParticles:
+        del args
         _t = force_bitcast_convert_type(t, jnp.int32)
         key = jr.fold_in(self.key, _t)
         keys = split_by_tree(key, particles)
 
-        def _choice(key, p, count):
+        def _choice(
+            key: PRNGKeyArray, p: Shaped[Array, "n d"], count: int | tuple[int, ...]
+        ) -> Shaped[Array, "n_hat d"] | Shaped[Array, "m n_div_m d"]:
             _, weights = unpack_particles(p, weighted)
             if weighted:
                 weights = self.weighting_function(weights)

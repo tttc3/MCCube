@@ -39,7 +39,7 @@ $$
 where the step size $h=t_{i+1}-t_{i}$ is constant, and each $\Delta W_{i}$ is an idependant sample from a (potentially multi-variate) Gaussian variable with mean zero and diagonal covariance $h$.
 
 ### ULA in Diffrax
-It is very easy to implement the ULA in Diffrax, as demonstrated in the below example, which generates 512 independant Markov chains by simulating the SDE via the Euler-Maruyama method, performing the standard unadjusted Langevin algorithm for a single initial condition ($Y_0$ is a d-dimensional vector with all elements equal to one). 
+It is very easy to implement the ULA in Diffrax, as demonstrated in the below example, which generates 512 independant Markov chains by simulating the SDE via the Euler-Maruyama method, performing the standard unadjusted Langevin algorithm for a single initial condition ($Y_0$ is a d-dimensional vector with all elements equal to one).
 
 It is important to note that while the computation of the 512 chains is performed in parallel, this is not a "Parallel MCMC" method as each path is independant (unlike in MCC).
 
@@ -85,7 +85,7 @@ solver = diffrax.Euler()
 sol = diffrax.diffeqsolve(
     terms,
     solver,
-    t0, 
+    t0,
     t1,
     dt0,
     y0,
@@ -113,7 +113,7 @@ evaluate_method(particles, "Diffrax ULA")
 ### Adjusted Langevin Algorithm in Blackjax
 ULA does not strictly obey the [detailed balance](https://en.wikipedia.org/wiki/Detailed_balance) properties required for a unique ergodic stationary distribution to exist, and as such, is unlikely to be used in practice.
 
-A more realistic scenario would be the use of the [Blackjax](https://github.com/blackjax-devs/blackjax) package and one of its more advanced samplers. For example, the [Metropolis-Adjusted Langevin Algorithm (MALA)](https://en.wikipedia.org/wiki/Metropolis-adjusted_Langevin_algorithm), see demonstration below, which adjusts the ULA to ensure the detailed balance properties are enforced. 
+A more realistic scenario would be the use of the [Blackjax](https://github.com/blackjax-devs/blackjax) package and one of its more advanced samplers. For example, the [Metropolis-Adjusted Langevin Algorithm (MALA)](https://en.wikipedia.org/wiki/Metropolis-adjusted_Langevin_algorithm), see demonstration below, which adjusts the ULA to ensure the detailed balance properties are enforced.
 
 ```python
 import blackjax
@@ -148,7 +148,7 @@ evaluate_method(particles, "Blackjax MALA")
 ```
 
 ## Markov Chain Cubature
-Markov chain cubature allows us to take a fundamentally different approach to the problem of solving the Langevin SDE (equivalently obtaining samples from $f$). 
+Markov chain cubature allows us to take a fundamentally different approach to the problem of solving the Langevin SDE (equivalently obtaining samples from $f$).
 Rather than atempting to obtain (potenially $n$) independant pathwise solutions to the SDE, with MCC, one attempts to find a set of $n$ time-evolving dependant particles which at any point in time attempt to weakly solve the SDE (that is solve the SDE in law/distribution).
 
 The crucial difference here is that paths traced by these particles need not coincide with any pathwise solutions of the SDE. The only requirement is that the distribution of these particles be identical to the distribution of all the infinitely many pathwise solutions.
@@ -172,9 +172,9 @@ Now returning to the example in the [README](/#example) reproduced below:
 ```python
 from mccube import (
     GaussianRegion,
-    Hadamard, 
+    Hadamard,
     LocalLinearCubaturePath,
-    MCCSolver, 
+    MCCSolver,
     MCCTerm,
     MonteCarloKernel,
     PartitioningRecombinationKernel,
@@ -195,7 +195,7 @@ solver = MCCSolver(diffrax.Euler(), kernel)
 sol = diffrax.diffeqsolve(
     terms,
     solver,
-    t0, 
+    t0,
     t1,
     dt0,
     y0,
@@ -221,7 +221,7 @@ solver = MCCSolver(diffrax.Euler(), kernel)
 sol = diffrax.diffeqsolve(
     terms,
     solver,
-    t0, 
+    t0,
     t1,
     dt0,
     y0,
@@ -235,10 +235,10 @@ evaluate_method(particles, "MCCube ULA | Partitioned MC Kernel")
 ```
 
 ### Weighted MCC
-The above examples treat all particles as having equal mass/weight. That is to say, one can consider the particles as representing a discrete measure 
+The above examples treat all particles as having equal mass/weight. That is to say, one can consider the particles as representing a discrete measure
 $$\mu = \sum_{i=1}^n \lambda_i \delta_{x_i},$$
 where each $\lambda_i$ is a probability weight/mass and each $x_{i}$ is a particle.
-In the above examples, the guassian cubature assigns equal weight to each proposal particle (update path), and the recombination kernels are weight invariant. However, in some cases the gaussian cubature will assign unequall weights, and the recombination kernel will be weight dependant. 
+In the above examples, the guassian cubature assigns equal weight to each proposal particle (update path), and the recombination kernels are weight invariant. However, in some cases the gaussian cubature will assign unequall weights, and the recombination kernel will be weight dependant.
 
 To utilise these weights in MCCube is relatively simple, requiring only a few minor modifications to the prior example.
 
@@ -253,7 +253,7 @@ solver = MCCSolver(diffrax.Euler(), kernel, weighted=True)
 sol = diffrax.diffeqsolve(
     terms,
     solver,
-    t0, 
+    t0,
     t1,
     dt0,
     y0_weighted,
@@ -305,9 +305,9 @@ evaluate_method(state.particles, "SVGD")
 Like with MCC, the performance in this case is worse than ULA/MALA, again highlighting the importance of selecting appropriate kernels and (for SVGD) optimizers. Interested readers are encouraged to play around with the above examples and to identify parameterisations which yield enhanced performance.
 
 ## Next Steps
-Equiped with the above knowledge, it should be possible to start experimenting with MCCube. 
+Equiped with the above knowledge, it should be possible to start experimenting with MCCube.
 
 API documentation can be found [here](api/), and please feel free to submit an issue if there are any tutorials or guides you would like to see added to the documentation.
 
 !!! tip
-    To get the most out of this package it is helpful to be familiar with all the         bells and whistles of [Diffrax](https://github.com/patrick-kidger/diffrax). 
+    To get the most out of this package it is helpful to be familiar with all the         bells and whistles of [Diffrax](https://github.com/patrick-kidger/diffrax).

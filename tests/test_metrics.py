@@ -40,5 +40,4 @@ def test_pairwise_metric():
     expected_dist = jnp.array(
         [[0.0, 5.0, 13.0], [5.0, 0.0, jnp.sqrt(68)], [13.0, jnp.sqrt(68), 0.0]]
     )
-    print(expected_dist)
     assert eqx.tree_equal(dist, expected_dist)

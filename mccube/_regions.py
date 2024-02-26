@@ -1,5 +1,5 @@
-"""Defines the integration regions (measure spaces) against which [`AbstractCubatures`][mccube.AbstractCubature] 
-can be defined."""
+"""Defines the integration regions (measure spaces) against which
+[`AbstractCubatures`][mccube.AbstractCubature] can be defined."""
 
 import abc
 
@@ -19,10 +19,10 @@ class AbstractRegion(eqx.Module):
 
     dimension: int
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def volume(self) -> float:
         r"""Measure $\mu$ of the entirety of $\Omega$, denoted by $V$."""
-        ...
 
 
 class GaussianRegion(AbstractRegion):

@@ -1,3 +1,4 @@
 beartype
 jaxlib
 pytest
+pytest-cov
